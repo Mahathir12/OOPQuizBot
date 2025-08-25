@@ -1,0 +1,9 @@
+{
+  "ai": {
+    "baseUrl": "http://localhost:1234/v1",
+    "model": "phi-3-mini-4k-instruct",
+    "apiKey": ""
+  }
+}
+
+  

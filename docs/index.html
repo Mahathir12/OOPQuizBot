@@ -1,0 +1,45 @@
+﻿<!DOCTYPE html>
+<html lang=""en"">
+<head>
+  <meta charset=""UTF-8"" />
+  <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"" />
+  <title>OOP Quiz Bot</title>
+  <link rel=""stylesheet"" href=""style.css"" />
+</head>
+<body>
+<header>
+  <h1>OOP Quiz Bot Project</h1>
+  <nav>
+    <a href=""#notebook"" id=""tab-notebook"" class=""active"">Notebook</a>
+    <a href=""#quiz"" id=""tab-quiz"">Quiz</a>
+    <a href=""#ai"" id=""tab-ai"">AI Help</a>
+  </nav>
+</header>
+
+<section id=""section-notebook"" class=""tab-section active"">
+  <h2>Notebook</h2>
+  <textarea id=""note-text"" rows=""8"" cols=""60"" placeholder=""Write your notes here...""></textarea><br />
+  <button id=""btn-save-note"">Save Note</button>
+  <button id=""btn-load-note"">Load Last Saved</button>
+  <p class=""status"" id=""note-status""></p>
+</section>
+
+<section id=""section-quiz"" class=""tab-section"">
+  <h2>Quiz</h2>
+  <div id=""quiz-content""></div>
+  <button id=""btn-submit-quiz"">Submit Answers</button>
+  <p id=""quiz-result"" class=""status""></p>
+</section>
+
+<section id=""section-ai"" class=""tab-section"">
+  <h2>AI Help</h2>
+  <input type=""text"" id=""ai-question"" size=""50"" placeholder=""Enter your question..."" />
+  <button id=""btn-ask-ai"">Ask AI</button>
+  <button id=""btn-ai-to-notebook"">Send to Notebook</button>
+  <div id=""ai-answer"" class=""ai-response""></div>
+</section>
+
+<footer><p>© 2025 OOP Quiz Bot Project</p></footer>
+<script src=""script.js""></script>
+</body>
+</html>

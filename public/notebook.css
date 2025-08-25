@@ -1,0 +1,47 @@
+.nb-layout{display:grid;grid-template-columns:280px 1fr; height:calc(100vh - 56px);}
+.nb-tools{padding:16px; overflow:auto; border-right:1px solid var(--hairline);}
+.nb-tools .group{margin-bottom:16px}
+.nb-tools .group label{display:block; font-weight:600; margin-bottom:6px}
+.nb-tools .group .row{display:flex; gap:8px; align-items:center; margin:6px 0}
+.nb-tools .tool{display:block; width:100%; margin:4px 0}
+.nb-tools .tool.active{outline:2px solid var(--accent)}
+
+.nb-canvas-wrap{position:relative; overflow:auto; background:var(--surface-1);}
+#paper{position:relative; margin:32px auto; width:900px; min-height:1200px; background:var(--page-color,#fffef9); box-shadow:0 2px 24px rgba(0,0,0,.08);}
+
+#paper.plain{background:var(--page-color,#fffef9);}
+#paper.lined{
+  background:
+   linear-gradient(transparent 28px,rgba(0,0,0,.08) 29px, transparent 30px) 0 0/100% 32px,
+   var(--page-color,#fffef9);
+}
+#paper.grid{
+  background:
+   linear-gradient(rgba(0,0,0,.06) 1px, transparent 1px) 0 0/100% 28px,
+   linear-gradient(90deg,rgba(0,0,0,.06) 1px, transparent 1px) 0 0/28px 100%,
+   var(--page-color,#fffef9);
+}
+#paper.dots{
+  background:
+    radial-gradient(rgba(0,0,0,.20) 1px, transparent 1px) 0 0/28px 28px,
+    var(--page-color,#fffef9);
+}
+#paper.margin:before{
+  content:""; position:absolute; left:64px; top:0; bottom:0; width:2px; background:#e15b5b; opacity:.7; pointer-events:none;
+}
+
+/* drawing layer and text blocks */
+.canvas{position:absolute; inset:0; touch-action:none; }
+.note-text{position:absolute; min-width:120px; min-height:32px; padding:8px 10px; border-radius:8px; background:rgba(255,255,255,.9); border:1px solid var(--hairline); box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.note-text[contenteditable=true]:focus{outline:2px solid var(--accent)}
+.note-text pre code{border-radius:6px; display:block; padding:10px}
+
+/* printing */
+@media print{
+  body{background:white}
+  .topbar,.nb-tools,.site-footer{display:none !important}
+  #paper{box-shadow:none; width:auto; margin:0; padding:0}
+  @page{size:A4; margin:12mm}
+  .paper{page-break-inside:auto}
+  .note-text{border:none; background:transparent; box-shadow:none}
+}

@@ -1,0 +1,12 @@
+﻿body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+header { background: #333; color: #fff; padding: 1em; }
+header h1 { margin: 0 0 .5em; }
+nav a { color: #ddd; text-decoration: none; margin-right: 1em; padding: .2em .5em; border-radius: 4px; }
+nav a.active, nav a:hover { background: #555; color: #fff; }
+section.tab-section { display: none; padding: 1em; }
+section.tab-section.active { display: block; }
+textarea { width: 100%; max-width: 600px; }
+.status { font-weight: bold; color: green; }
+.status.error { color: red; }
+.ai-response { margin-top: 1em; padding: .5em; border: 1px solid #ccc; background: #f9f9f9; white-space: pre-wrap; }
+footer { text-align: center; padding: 1em; background: #f0f0f0; margin-top: 2em; }

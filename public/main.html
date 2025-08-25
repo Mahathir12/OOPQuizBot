@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Notebook — OOP Quiz Bot</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    /* Print: A4 pages with margins; keep colors */
+    @media print {
+      html, body { height: auto; }
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .topbar, .toolbar, .footer-pad { display: none !important; }
+      .page-wrap { margin: 0; padding: 0; }
+      .page {
+        width: 210mm; height: 297mm;
+        page-break-after: always;
+        margin: 0 auto;
+      }
+    }
+  </style>
+</head>
+<body class="page-notebook">
+  <header class="topbar">
+    <div class="brand">
+      <span class="dot"></span>
+      <strong>Notebook</strong>
+    </div>
+    <nav class="nav">
+      <a href="index.html">Home</a>
+      <a href="login.html">Quiz/Login</a>
+      <button id="logoutBtn" class="btn danger">Logout</button>
+      <button id="themeToggle" class="btn ghost">Light/Dark</button>
+    </nav>
+  </header>
+
+  <!-- Tools -->
+  <div class="toolbar">
+    <div class="group">
+      <button class="btn tiny tool" data-tool="pen" title="Pen">Pen</button>
+      <button class="btn tiny tool" data-tool="highlighter" title="Highlighter">HL</button>
+      <button class="btn tiny tool" data-tool="eraser" title="Eraser">Eraser</button>
+      <button class="btn tiny tool" data-tool="ruler" title="Ruler (drag to draw straight line)">Ruler</button>
+      <button class="btn tiny tool" data-tool="pan" title="Pan/Scroll (mouse mode)">Pan</button>
+    </div>
+    <div class="group">
+      <input id="penColor" type="color" value="#ff4d4f" title="Color" />
+      <input id="penSize" type="range" min="1" max="24" value="4" title="Size" />
+    </div>
+    <div class="group">
+      <select id="paperStyle" title="Paper style">
+        <option value="ruled">Ruled (with margin)</option>
+        <option value="grid">Grid</option>
+        <option value="plain">Plain</option>
+      </select>
+      <select id="paperColor" title="Page color">
+        <option value="paper-white">White</option>
+        <option value="paper-ivory">Ivory</option>
+        <option value="paper-night">Night</option>
+      </select>
+      <button id="toggleGraphics" class="btn tiny">Graphics On/Off</button>
+    </div>
+    <div class="group">
+      <input id="imageInput" type="file" accept="image/*" class="hide" />
+      <button id="insertImageBtn" class="btn tiny">Insert Image</button>
+      <button id="saveBtn" class="btn tiny">Save</button>
+      <button id="loadBtn" class="btn tiny">Load</button>
+      <button id="printBtn" class="btn tiny">Print / Save PDF</button>
+    </div>
+  </div>
+
+  <!-- Canvas page -->
+  <div class="page-wrap">
+    <div class="page paper paper-ruled paper-white show-graphics" id="page">
+      <canvas id="noteCanvas" width="1122" height="1587" aria-label="Notebook canvas"></canvas>
+      <canvas id="overlayCanvas" width="1122" height="1587" class="overlay"></canvas>
+    </div>
+    <div class="footer-pad"></div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

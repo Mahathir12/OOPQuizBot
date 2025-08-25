@@ -1,0 +1,11 @@
+﻿build/
+.vscode/
+*.log
+*.user
+*.vcxproj.user
+*.db
+*.tmp
+*.cache
+data/notes/
+data/uploads/
+*.env

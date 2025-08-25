@@ -1,0 +1,25 @@
+{
+  "users" : 
+  [
+    {
+      "password" : "Mahathirmr12",
+      "role" : "Student",
+      "username" : "Mahathir"
+    },
+    {
+      "password" : "Mahathirmr12",
+      "role" : "Teacher",
+      "username" : "Boss"
+    },
+    {
+      "password" : "Admin123",
+      "role" : "Admin",
+      "username" : "Admin"
+    },
+    {
+      "password" : "Admin123",
+      "role" : "Admin",
+      "username" : "Admin1"
+    }
+  ]
+}
