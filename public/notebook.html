@@ -1,89 +1,47 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Notebook — OOP Quiz Bot</title>
-<link rel="stylesheet" href="style.css"/>
-<link rel="stylesheet" href="notebook.css"/>
-<!-- highlight.js for code tint -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-<!-- chart.js for quick charts -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Notebook — OOPQuizBot</title>
+  <link rel="stylesheet" href="notebook.css" />
 </head>
-<body class="theme-auto">
-<header class="topbar">
-  <div class="brand">Notebook</div>
-  <div class="grow"></div>
+<body>
   <div class="toolbar">
-    <button id="btnTheme">Theme</button>
-    <button id="btnPrint">Print</button>
-    <a href="index.html">Home</a>
+    <select id="mode">
+      <option value="pen">Pen</option>
+      <option value="pencil">Pencil</option>
+      <option value="highlighter">Highlighter</option>
+      <option value="eraser">Eraser</option>
+      <option value="text">Text</option>
+      <option value="line">Line</option>
+      <option value="rect">Rectangle</option>
+      <option value="circle">Circle</option>
+    </select>
+    <input id="color" type="color" value="#0B0F14" />
+    <input id="width" type="number" min="1" max="32" value="2" />
+    <button id="insertText">Text</button>
+    <button id="insertTable">Table</button>
+    <label><input type="checkbox" id="gridToggle"> Grid</label>
+    <label><input type="checkbox" id="rulerToggle"> Rulers</label>
+    <button id="clearCanvas">Clear</button>
+    <div class="right">
+      <button id="themeToggle">🌗 Theme</button>
+      <button id="saveBtn">💾 Save</button>
+      <button id="loadBtn">📂 Load</button>
+      <button id="printBtn">🖨️ Print</button>
+    </div>
   </div>
-</header>
 
-<main class="nb-layout">
-  <aside class="nb-tools">
-    <div class="group">
-      <label>Mode</label>
-      <button data-mode="pen" class="tool active">✒️ Pen</button>
-      <button data-mode="pencil" class="tool">✏️ Pencil</button>
-      <button data-mode="highlighter" class="tool">🖍 Highlighter</button>
-      <button data-mode="eraser" class="tool">🩹 Eraser</button>
-      <button data-mode="text" class="tool">🔤 Text</button>
-      <button data-mode="shape-rect" class="tool">▭ Rect</button>
-      <button data-mode="shape-ellipse" class="tool">◯ Ellipse</button>
-      <button data-mode="shape-line" class="tool">／ Line</button>
-      <button data-mode="pan" class="tool">✋ Pan</button>
+  <div class="sheet-wrap">
+    <div class="sheet">
+      <div id="gridOverlay"></div>
+      <div id="rulerX"></div><div id="rulerY"></div>
+      <div id="blocks"></div>
+      <canvas id="inkCanvas"></canvas>
     </div>
+  </div>
 
-    <div class="group">
-      <label>Stroke</label>
-      <input type="color" id="color" value="#1f7ae0"/>
-      <input type="range" id="size" min="1" max="18" value="4"/>
-    </div>
-
-    <div class="group">
-      <label>Page</label>
-      <select id="pageBg">
-        <option value="plain">Plain</option>
-        <option value="lined" selected>Lined</option>
-        <option value="grid">Grid</option>
-        <option value="dots">Dots</option>
-      </select>
-      <label class="row"><input type="checkbox" id="margin" checked> Left margin</label>
-      <label class="row">Color <input type="color" id="pageColor" value="#fffef9"></label>
-    </div>
-
-    <div class="group">
-      <label>Blocks</label>
-      <button id="btnTable">Table</button>
-      <button id="btnChart">Chart</button>
-    </div>
-
-    <div class="group">
-      <label>Save/Load</label>
-      <input id="pageId" placeholder="page name" value="default"/>
-      <button id="btnSave">Save</button>
-      <button id="btnLoad">Load</button>
-    </div>
-  </aside>
-
-  <section class="nb-canvas-wrap">
-    <div id="paper" class="paper lined margin"></div>
-  </section>
-</main>
-
-<footer class="site-footer"></footer>
-
-<script src="theme.js"></script>
-<script src="notebook.js"></script>
-<script>
-  document.querySelector('.site-footer').innerHTML =
-    `© Copyright by Team M^3 · Project OOPQuizBot ·
-     <a href="founders.html">Founders</a> ·
-     <a href="mailto:mahathirmahi40690@gmail.com">mahathirmahi40690@gmail.com</a>`;
-</script>
+  <script src="notebook.js"></script>
 </body>
 </html>

@@ -1,189 +1,262 @@
-/* Notebook runtime */
-const paper = document.getElementById('paper');
-const btnTheme = document.getElementById('btnTheme');
-const btnPrint = document.getElementById('btnPrint');
-const color = document.getElementById('color');
-const size = document.getElementById('size');
-const pageBg = document.getElementById('pageBg');
-const marginBox = document.getElementById('margin');
-const pageColor = document.getElementById('pageColor');
-const pageId = document.getElementById('pageId');
+/* notebook.js - full */
+const $ = (sel, el=document) => el.querySelector(sel);
+const $$ = (sel, el=document) => Array.from(el.querySelectorAll(sel));
 
-function qs(sel){ return document.querySelector(sel); }
-function $el(tag, cls){ const e=document.createElement(tag); if(cls) e.className=cls; return e; }
+const api = {
+  save: (file, content) => fetch('/api/notes/save', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ file, content })
+  }).then(r=>r.json()),
+  load: (file) => fetch('/api/notes/load', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ file })
+  }).then(r=>r.json())
+};
 
-function setMode(m){
-  state.mode = m;
-  document.querySelectorAll('.tool').forEach(b=>b.classList.toggle('active', b.dataset.mode===m));
-}
+// --- Theme toggle
+(function themeInit(){
+  const saved = localStorage.getItem('theme');
+  if(saved) document.documentElement.setAttribute('data-theme', saved);
+  const btn = $('#themeToggle');
+  if(btn){
+    btn.onclick = () => {
+      const next = document.documentElement.getAttribute('data-theme') === 'dark' ? '' : 'dark';
+      if(next) document.documentElement.setAttribute('data-theme', next);
+      else document.documentElement.removeAttribute('data-theme');
+      localStorage.setItem('theme', next);
+      resizeCanvas();
+      drawAll();
+    };
+  }
+})();
+
+// --- Editor state
 const state = {
-  mode:'pen',
-  drawing:false,
-  start:[0,0],
-  last:[0,0],
-  panOffset:[0,0],
-  obj:null
+  file: 'default',
+  mode: 'pen', // pen|pencil|highlighter|eraser|text|line|rect|circle|table
+  color: '#0B0F14',
+  width: 2,
+  drawing: false,
+  points: [],
+  shapes: [], // {type, ...}
+  grid: false,
 };
 
-function setBg(){
-  paper.classList.remove('plain','lined','grid','dots');
-  paper.classList.add(pageBg.value);
-  if(marginBox.checked) paper.classList.add('margin'); else paper.classList.remove('margin');
-  paper.style.setProperty('--page-color', pageColor.value);
+const sheet = $('.sheet');
+const canvas = $('#inkCanvas');
+const ctx = canvas.getContext('2d', { alpha: true });
+const blocks = $('#blocks');
+const rulerX = $('#rulerX');
+const rulerY = $('#rulerY');
+const gridOverlay = $('#gridOverlay');
+
+// --- Toolbar bindings
+$('#mode').onchange = e=> state.mode = e.target.value;
+$('#color').onchange = e=> state.color = e.target.value;
+$('#width').onchange = e=> state.width = +e.target.value;
+$('#gridToggle').onchange = e=> {
+  state.grid = e.target.checked;
+  gridOverlay.style.display = state.grid ? 'block' : 'none';
+};
+$('#rulerToggle').onchange = e=>{
+  const on = e.target.checked;
+  rulerX.style.display = on ? 'block':'none';
+  rulerY.style.display = on ? 'block':'none';
+};
+
+$('#insertText').onclick = ()=> insertText();
+$('#insertTable').onclick = ()=> insertTable();
+$('#clearCanvas').onclick = ()=> { state.shapes=[]; drawAll(); };
+$('#saveBtn').onclick = savePage;
+$('#loadBtn').onclick = loadPage;
+$('#printBtn').onclick = ()=> window.print();
+
+// Auto link styling via MutationObserver
+const linkify = txt =>
+  txt.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank">$1</a>');
+
+// Simple C/C++ code tint
+function codeTint(text){
+  const kw = /\b(class|struct|virtual|override|public|private|protected|return|if|else|for|while|switch|case|template|typename|using|namespace|new|delete|try|catch|throw|const|constexpr|inline|static|friend)\b/g;
+  return text
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(kw, '<b>$1</b>');
 }
-setBg();
-pageBg.onchange=setBg; marginBox.onchange=setBg; pageColor.oninput=setBg;
 
-document.querySelectorAll('.tool').forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
-btnTheme.onclick=()=>document.body.classList.toggle('theme-dark');
-btnPrint.onclick=()=>window.print();
-
-/* canvas for freehand + shapes */
-const canvas = $el('canvas','canvas'); paper.appendChild(canvas);
-const ctx = canvas.getContext('2d',{ willReadFrequently:true });
-
+// --- Canvas sizing
 function resizeCanvas(){
-  canvas.width = paper.clientWidth;
-  canvas.height = Math.max(paper.clientHeight, 1400);
+  const r = sheet.getBoundingClientRect();
+  canvas.width = Math.floor(r.width * devicePixelRatio);
+  canvas.height = Math.floor(r.height * devicePixelRatio);
+  canvas.style.width = r.width + 'px';
+  canvas.style.height= r.height + 'px';
+  ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
 }
-resizeCanvas(); new ResizeObserver(resizeCanvas).observe(paper);
+window.addEventListener('resize', ()=>{ resizeCanvas(); drawAll(); });
+resizeCanvas();
 
-function pointerPos(e){ const r=canvas.getBoundingClientRect(); return [e.clientX-r.left, e.clientY-r.top]; }
+// --- Prevent page scroll while drawing (critical for stability)
+let preventScroll = false;
+['touchstart','touchmove','wheel'].forEach(ev =>
+  document.addEventListener(ev, e => { if(preventScroll) e.preventDefault(); }, { passive:false })
+);
 
-function strokeStyle(){
-  let w = +size.value; let rgba = hexToRgba(color.value, 1.0);
-  if(state.mode==='pencil') rgba=hexToRgba(color.value, .7), w=Math.max(1,w-1);
-  if(state.mode==='highlighter') rgba=hexToRgba(color.value, .35), w=Math.max(6, w+6);
-  ctx.strokeStyle = rgba; ctx.fillStyle = rgba; ctx.lineWidth = w; ctx.lineCap="round"; ctx.lineJoin="round";
-}
-function hexToRgba(hex, a=1){ const x=hex.replace('#',''); const r=parseInt(x.substr(0,2),16), g=parseInt(x.substr(2,2),16), b=parseInt(x.substr(4,2),16); return `rgba(${r},${g},${b},${a})`; }
-
-let panStart=[0,0], scrollStart=[0,0];
-
-canvas.addEventListener('pointerdown', (e)=>{
-  canvas.setPointerCapture(e.pointerId);
-  const [x,y]=pointerPos(e);
-  state.drawing=true; state.start=[x,y]; state.last=[x,y];
-  if(state.mode.startsWith('shape-')){ state.obj={x1:x,y1:y,x2:x,y2:y}; }
-  if(state.mode==='pan'){ panStart=[x,y]; scrollStart=[paper.scrollLeft||0, paper.scrollTop||0]; }
-  if(state.mode==='eraser'){ ctx.globalCompositeOperation='destination-out'; }
-  else ctx.globalCompositeOperation='source-over';
-  if(state.mode==='pen' || state.mode==='pencil' || state.mode==='highlighter'){
-    strokeStyle(); ctx.beginPath(); ctx.moveTo(x,y);
+// --- Pointer handling
+canvas.addEventListener('pointerdown', e=>{
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left, y = e.clientY - rect.top;
+  if(state.mode==='text'){ insertText(x,y); return; }
+  state.drawing = true; preventScroll = true;
+  state.points = [{x,y}];
+  if($('#rulerToggle').checked){
+    rulerX.style.top = y+'px'; rulerY.style.left = x+'px';
   }
-  e.preventDefault();
 });
-canvas.addEventListener('pointermove',(e)=>{
+document.addEventListener('pointerup', ()=>{
   if(!state.drawing) return;
-  const [x,y]=pointerPos(e);
-  if(state.mode==='pan'){
-    paper.scrollLeft = scrollStart[0] - (x - panStart[0]);
-    paper.scrollTop  = scrollStart[1] - (y - panStart[1]);
-    return;
-  }
-  if(state.mode==='pen' || state.mode==='pencil' || state.mode==='highlighter'){
-    strokeStyle(); ctx.lineTo(x,y); ctx.stroke();
-  } else if(state.mode.startsWith('shape-')){
-    // redraw last shape preview
-    const tmp = ctx.getImageData(0,0,canvas.width,canvas.height);
-    ctx.putImageData(tmp,0,0); // (simple preview – acceptable for MVP)
-    state.obj.x2=x; state.obj.y2=y;
-    drawShape(state.obj, true);
-  } else if(state.mode==='eraser'){
-    ctx.lineWidth=+size.value+10; ctx.beginPath(); ctx.moveTo(state.last[0],state.last[1]); ctx.lineTo(x,y); ctx.stroke();
-  }
-  state.last=[x,y];
-  e.preventDefault();
+  state.drawing = false; preventScroll = false;
+  commitStroke();
 });
-canvas.addEventListener('pointerup', (e)=>{
-  if(state.mode.startsWith('shape-') && state.obj){ drawShape(state.obj,false); state.obj=null; }
-  state.drawing=false; e.preventDefault();
+canvas.addEventListener('pointermove', e=>{
+  if($('#rulerToggle').checked){
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left, y = e.clientY - rect.top;
+    rulerX.style.top = y+'px'; rulerY.style.left = x+'px';
+  }
+  if(!state.drawing) return;
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left, y = e.clientY - rect.top;
+  state.points.push({x,y});
+  drawAll();
 });
-function drawShape(o,preview){
-  strokeStyle();
-  if(state.mode==='shape-rect'){ ctx.strokeRect(Math.min(o.x1,o.x2), Math.min(o.y1,o.y2), Math.abs(o.x2-o.x1), Math.abs(o.y2-o.y1)); }
-  if(state.mode==='shape-ellipse'){ ctx.beginPath(); ctx.ellipse((o.x1+o.x2)/2,(o.y1+o.y2)/2,Math.abs(o.x2-o.x1)/2,Math.abs(o.y2-o.y1)/2,0,0,Math.PI*2); ctx.stroke(); }
-  if(state.mode==='shape-line'){ ctx.beginPath(); ctx.moveTo(o.x1,o.y1); ctx.lineTo(o.x2,o.y2); ctx.stroke(); }
+
+// --- Shapes storage/draw
+function commitStroke(){
+  const p = state.points.slice();
+  if(p.length<2) return;
+  switch(state.mode){
+    case 'pen':
+    case 'pencil':
+    case 'highlighter':
+    case 'eraser':
+      state.shapes.push({
+        type: state.mode,
+        color: state.mode==='eraser' ? '#FFFFFF00' : state.color,
+        width: state.width,
+        points: p
+      }); break;
+    case 'line':
+      state.shapes.push({ type:'line', color:state.color, width:state.width, p1:p[0], p2:p[p.length-1]}); break;
+    case 'rect':
+      const p0=p[0], p1=p[p.length-1];
+      state.shapes.push({ type:'rect', color:state.color, width:state.width, x:Math.min(p0.x,p1.x), y:Math.min(p0.y,p1.y), w:Math.abs(p1.x-p0.x), h:Math.abs(p1.y-p0.y) });
+      break;
+    case 'circle':
+      const a=p[0], b=p[p.length-1];
+      const r = Math.hypot(b.x-a.x,b.y-a.y);
+      state.shapes.push({ type:'circle', color:state.color, width:state.width, x:a.x, y:a.y, r });
+      break;
+  }
+  drawAll();
 }
 
-/* text block */
-document.querySelector('[data-mode="text"]').addEventListener('dblclick', ()=>{
-  setMode('text');
-});
-paper.addEventListener('dblclick',(e)=>{
-  if(state.mode!=='text') return;
-  const r=paper.getBoundingClientRect();
-  const box=$el('div','note-text'); box.contentEditable=true;
-  box.style.left=(e.clientX-r.left-40)+'px'; box.style.top=(e.clientY-r.top-12)+'px';
-  box.innerHTML='Type here…';
-  paper.appendChild(box); box.focus();
-});
-paper.addEventListener('input',e=>{
-  if(!e.target.classList.contains('note-text')) return;
-  // URLs -> links
-  e.target.innerHTML = e.target.innerHTML
-    .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" class="autolink">$1</a>');
-  // ```cpp code blocks -> highlight
-  document.querySelectorAll('.note-text pre code').forEach(el=>hljs.highlightElement(el));
-});
+function drawAll(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  for(const s of state.shapes){
+    ctx.lineJoin='round'; ctx.lineCap='round';
+    let opacity=1, w=s.width;
+    if(s.type==='pencil') w=Math.max(1,s.width-1);
+    if(s.type==='highlighter'){ opacity=.35; w = s.width+8; }
+    ctx.globalAlpha=opacity;
+    ctx.strokeStyle=s.color; ctx.lineWidth=w;
 
-/* Tables & Charts (quick insert) */
-document.getElementById('btnTable').onclick=()=>{
-  const t=$el('div','note-text'); t.contentEditable=true;
-  t.style.left='80px'; t.style.top='80px';
-  t.innerHTML=`<table border="1" style="border-collapse:collapse;width:420px">
-    <tr><th>Item</th><th>Value</th></tr>
-    <tr><td>A</td><td>10</td></tr>
-    <tr><td>B</td><td>20</td></tr>
-  </table>`;
-  paper.appendChild(t);
-};
-document.getElementById('btnChart').onclick=()=>{
-  const box=$el('div','note-text'); box.style.left='120px'; box.style.top='120px';
-  const c=$el('canvas'); c.width=360; c.height=200; box.appendChild(c); paper.appendChild(box);
-  new Chart(c,{type:'bar',data:{labels:['A','B','C'],datasets:[{label:'Demo',data:[3,5,2]}]},options:{responsive:false, plugins:{legend:{display:false}}}});
-};
+    if(s.type==='pen'||s.type==='pencil'||s.type==='highlighter'){
+      ctx.beginPath();
+      const pts=s.points; ctx.moveTo(pts[0].x, pts[0].y);
+      for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x, pts[i].y);
+      ctx.stroke();
+    }else if(s.type==='eraser'){
+      ctx.globalCompositeOperation='destination-out';
+      ctx.beginPath();
+      const pts=s.points; ctx.moveTo(pts[0].x, pts[0].y);
+      for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x, pts[i].y);
+      ctx.lineWidth = s.width+10; ctx.stroke();
+      ctx.globalCompositeOperation='source-over';
+    }else if(s.type==='line'){
+      ctx.beginPath(); ctx.moveTo(s.p1.x,s.p1.y); ctx.lineTo(s.p2.x,s.p2.y); ctx.stroke();
+    }else if(s.type==='rect'){
+      ctx.strokeRect(s.x,s.y,s.w,s.h);
+    }else if(s.type==='circle'){
+      ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2); ctx.stroke();
+    }
+    ctx.globalAlpha=1;
+  }
+}
 
-/* Save/Load via backend (HTML content + canvas PNG) */
+// --- Insert text
+function insertText(x=120,y=120){
+  const div = document.createElement('div');
+  div.className='note-text';
+  div.contentEditable='true';
+  div.style.position='absolute';
+  div.style.left = (x||120)+'px';
+  div.style.top  = (y||120)+'px';
+  div.innerHTML = 'Type here…';
+  div.oninput = () => { div.innerHTML = linkify(div.innerHTML); };
+  div.onkeydown = e=>{
+    if(e.ctrlKey && e.key.toLowerCase()==='b'){ document.execCommand('bold'); e.preventDefault(); }
+  };
+  blocks.appendChild(div);
+  div.focus();
+}
+
+// --- Insert table (3x3)
+function insertTable(){
+  const t = document.createElement('table'); t.className='note-table';
+  for(let r=0;r<3;r++){
+    const tr=document.createElement('tr');
+    for(let c=0;c<3;c++){
+      const td=document.createElement('td'); td.contentEditable='true'; td.textContent=' ';
+      tr.appendChild(td);
+    }
+    t.appendChild(tr);
+  }
+  blocks.appendChild(t);
+}
+
+// --- Save/Load (HTML blocks + shapes as JSON)
+function serialize(){
+  return JSON.stringify({
+    html: blocks.innerHTML,
+    shapes: state.shapes,
+    theme: document.documentElement.getAttribute('data-theme')||'',
+  });
+}
+function deserialize(s){
+  try{
+    const o = JSON.parse(s);
+    blocks.innerHTML = o.html||'';
+    state.shapes = o.shapes||[];
+    if(o.theme) document.documentElement.setAttribute('data-theme', o.theme);
+    gridOverlay.style.display = state.grid ? 'block' : 'none';
+    drawAll();
+  }catch(_){}
+}
+
 async function savePage(){
-  const page = pageId.value.trim()||'default';
-  // serialize: canvas image + text blocks
-  const blocks = Array.from(document.querySelectorAll('.note-text')).map(n=>({x:n.style.left,y:n.style.top,html:n.innerHTML}));
-  const payload = `<div class="page" data-bg="${pageBg.value}" data-margin="${marginBox.checked}" data-color="${pageColor.value}">
-  <img class="ink" src="${canvas.toDataURL('image/png')}"/>
-  ${blocks.map(b=>`<div class="note-text" style="left:${b.x};top:${b.y}">${b.html}</div>`).join('\n')}
-</div>`;
-  const r = await fetch('/api/notes/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({file:page,content:payload})});
-  const j = await r.json(); alert(j.ok?'Saved':'Save error');
+  const body = `<data type="note/json">${serialize()}</data>`;
+  const r = await api.save(state.file, body);
+  alert(r.ok ? 'Saved!' : ('Save failed: ' + (r.error||'unknown')));
 }
 async function loadPage(){
-  const page = pageId.value.trim()||'default';
-  const r = await fetch('/api/notes/load',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({file:page})});
-  const j = await r.json(); if(!j.ok) return alert('Load error');
-  // reset
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  document.querySelectorAll('.note-text').forEach(n=>n.remove());
-  if(!j.content) return;
-  const host = $el('div'); host.innerHTML=j.content;
-  const pg = host.querySelector('.page');
-  if(pg){
-    pageBg.value = pg.dataset.bg || 'lined';
-    marginBox.checked = (pg.dataset.margin==='true');
-    pageColor.value = pg.dataset.color || '#fffef9';
-    setBg();
-    const img = pg.querySelector('img.ink');
-    if(img){
-      const im = new Image(); im.onload=()=>{ctx.drawImage(im,0,0);}; im.src=img.src;
-    }
-    host.querySelectorAll('.note-text').forEach(n=>{
-      const d=$el('div','note-text'); d.style.left=n.style.left; d.style.top=n.style.top; d.innerHTML=n.innerHTML; paper.appendChild(d);
-    });
+  const r = await api.load(state.file);
+  if(r.ok && r.content){
+    const m = r.content.match(/<data type="note\/json">([\s\S]*)<\/data>/);
+    if(m) deserialize(m[1]);
+  }else{
+    alert('Nothing saved yet for this page.');
   }
 }
-document.getElementById('btnSave').onclick=savePage;
-document.getElementById('btnLoad').onclick=loadPage;
 
-/* prevent scroll while drawing */
-['touchstart','wheel'].forEach(type => canvas.addEventListener(type, e=> {
-  if(state.mode!=='pan') e.preventDefault();
-},{passive:false}));
+// Init once
+drawAll();

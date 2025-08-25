@@ -1,17 +1,34 @@
-# ---------- Build stage (has Drogon toolchain preinstalled)
-FROM drogonframework/drogon:latest AS build
-WORKDIR /app
-COPY . .
-RUN mkdir -p build && cd build \
- && cmake -DCMAKE_BUILD_TYPE=Release .. \
- && cmake --build . --config Release -j
+# Dockerfile (Linux, works on Render & locally)
+FROM debian:bookworm
 
-# ---------- Runtime stage
-FROM ubuntu:22.04
-RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y \
+  build-essential cmake git curl ca-certificates \
+  libjsoncpp-dev uuid-dev zlib1g-dev libssl-dev libbrotli-dev \
+  && rm -rf /var/lib/apt/lists/*
+
+# Build and install Trantor
+RUN git clone --depth 1 https://github.com/an-tao/trantor.git \
+ && cd trantor && mkdir build && cd build \
+ && cmake .. -DCMAKE_BUILD_TYPE=Release \
+ && make -j$(nproc) && make install
+
+# Build and install Drogon
+RUN git clone --depth 1 https://github.com/drogonframework/drogon.git \
+ && cd drogon && mkdir build && cd build \
+ && cmake .. -DCMAKE_BUILD_TYPE=Release \
+ && make -j$(nproc) && make install
+
 WORKDIR /app
-COPY --from=build /app/build/OOPQuizBot /app/OOPQuizBot
-COPY public public
-COPY data data
+COPY . /app
+
+RUN mkdir -p build && cd build \
+ && cmake .. -DCMAKE_BUILD_TYPE=Release \
+ && make -j$(nproc)
+
+ENV PORT=8080
 EXPOSE 8080
-CMD ["./OOPQuizBot"]
+
+# DeepSeek env are set in Render dashboard (do NOT hardcode secrets here)
+CMD ["./build/OOPQuizBot"]

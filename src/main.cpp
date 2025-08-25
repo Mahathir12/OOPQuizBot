@@ -95,12 +95,13 @@ static void callChatCompletions(const std::string &prompt,
     const char *k = std::getenv("AI_API_KEY");
     const std::string apiKey = k ? k : "";
     const char *mdl = std::getenv("AI_MODEL");
-    const std::string model = mdl ? mdl : "deepseek-chat"; // adjust if needed
+    const std::string model = mdl ? mdl : "deepseek-chat";
 
     auto cli = HttpClient::newHttpClient(apiBase);
     Json::Value body;
     body["model"] = model;
     body["messages"] = Json::arrayValue;
+
     if (!systemPrompt.empty())
     {
         Json::Value sys;
@@ -116,28 +117,27 @@ static void callChatCompletions(const std::string &prompt,
     auto req = HttpRequest::newHttpJsonRequest(body);
     req->setMethod(Post);
     req->setPath("/chat/completions");
-    req->addHeader("Authorization", "Bearer " + apiKey);
+    if (!apiKey.empty())
+        req->addHeader("Authorization", "Bearer " + apiKey);
 
     cli->sendRequest(req, [done](ReqResult r, const HttpResponsePtr &resp)
                      {
         Json::Value out; out["ok"]=false;
-        if(r==ReqResult::Ok && resp){
+        if (r==ReqResult::Ok && resp) {
             Json::Value j; Json::CharReaderBuilder rb;
             std::istringstream is(std::string(resp->body()));
             if (Json::parseFromStream(rb,is,&j,nullptr)) {
                 out["ok"]=true;
                 out["text"]=j["choices"][0]["message"]["content"];
-            } else { out["error"]="AI JSON parse error"; }
-        } else { out["error"]="AI request failed"; }
+            } else out["error"]="AI JSON parse error";
+        } else out["error"]="AI request failed";
         done(out); });
 }
 
-// ---------- main ----------
 int main()
 {
     ensureFiles();
 
-    // Allow container/Render to set PORT dynamically
     int port = 8080;
     if (const char *p = std::getenv("PORT"))
     {
@@ -152,13 +152,21 @@ int main()
 
     app().setLogLevel(trantor::Logger::kInfo).enableSession().setIdleConnectionTimeout(60).setDocumentRoot("./public").addListener("0.0.0.0", port);
 
-    // CORS preflight
-    app().registerHandler("/api/{1}", [](const HttpRequestPtr &, std::function<void(const HttpResponsePtr &)> &&cb)
-                          {
-        Json::Value ok; ok["ok"]=true;
-        cb(jsonResp(ok)); }, {Options});
+    // ----- CORS preflight (use wildcard; no placeholder mismatch)
+    // CORS preflight — REPLACE your current block with this one
+    app().registerHandler(
+        "/api/{1}",
+        [](const HttpRequestPtr &,
+           std::function<void(const HttpResponsePtr &)> &&cb,
+           const std::string & /*p1*/)
+        {
+            Json::Value ok;
+            ok["ok"] = true;
+            cb(jsonResp(ok));
+        },
+        {Options});
 
-    // ---- Health
+    // ----- Health
     app().registerHandler("/api/health",
                           [](const HttpRequestPtr &, std::function<void(const HttpResponsePtr &)> &&cb)
                           {
@@ -168,7 +176,7 @@ int main()
                           },
                           {Get});
 
-    // ---- Signup
+    // ----- Sign up
     app().registerHandler("/api/signup",
                           [](const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&cb)
                           {
@@ -210,7 +218,7 @@ int main()
                           },
                           {Post});
 
-    // ---- Login
+    // ----- Login
     app().registerHandler("/api/login",
                           [](const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&cb)
                           {
@@ -243,7 +251,7 @@ int main()
                           },
                           {Post});
 
-    // ---- Logout
+    // ----- Logout
     app().registerHandler("/api/logout",
                           [](const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&cb)
                           {
@@ -254,7 +262,7 @@ int main()
                           },
                           {Post});
 
-    // ---- Account: change password
+    // ----- Account (change password)
     app().registerHandler("/api/account/password",
                           [](const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&cb)
                           {
@@ -297,7 +305,7 @@ int main()
                           },
                           {Post});
 
-    // ---- Notes: save/load
+    // ----- Notes save/load (HTML content)
     app().registerHandler("/api/notes/save",
                           [](const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&cb)
                           {
@@ -329,6 +337,7 @@ int main()
                               cb(jsonResp(ok));
                           },
                           {Post});
+
     app().registerHandler("/api/notes/load",
                           [](const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&cb)
                           {
@@ -362,7 +371,7 @@ int main()
                           },
                           {Post});
 
-    // ---- Announcements (teacher/admin)
+    // ----- Announcements (get/post)
     app().registerHandler("/api/announcements",
                           [](const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&cb)
                           {
@@ -409,7 +418,7 @@ int main()
                           },
                           {Get, Post, Options});
 
-    // ---- File upload (PDF)  multipart/form-data    -> data/uploads
+    // ----- File upload (multipart) → data/uploads, plus /files/{name} to serve
     app().registerHandler("/api/upload",
                           [](const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&cb)
                           {
@@ -428,13 +437,14 @@ int main()
                               }
                               Json::Value out;
                               out["saved"] = Json::arrayValue;
-                              for (auto &f : parser.getFiles())
+                              for (const auto &f : parser.getFiles())
                               {
-                                  auto name = f.getFileName();
-                                  if (name.empty())
-                                      name = "upload.bin";
+                                  auto name = f.getFileName().empty() ? std::string("upload.bin") : f.getFileName();
                                   fs::path target = kUploadDir / name;
-                                  f.saveTo(target.string(), true);
+                                  // Safer across Drogon versions: write from content view.
+                                  auto data = f.fileContent(); // string_view
+                                  std::ofstream ofs(target, std::ios::binary | std::ios::trunc);
+                                  ofs.write(data.data(), (std::streamsize)data.size());
                                   Json::Value one;
                                   one["name"] = name;
                                   one["url"] = "/files/" + name;
@@ -445,22 +455,20 @@ int main()
                           },
                           {Post});
 
-    // Expose uploaded files read-only
     app().registerHandler("/files/{1}",
-                          [](const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&cb, const std::string &name)
+                          [](const HttpRequestPtr &, std::function<void(const HttpResponsePtr &)> &&cb, const std::string &name)
                           {
                               fs::path p = kUploadDir / name;
                               if (!fs::exists(p))
                               {
-                                  auto r = HttpResponse::newNotFoundResponse();
-                                  return cb(r);
+                                  cb(HttpResponse::newNotFoundResponse());
+                                  return;
                               }
-                              auto resp = HttpResponse::newFileResponse(p.string());
-                              cb(resp);
+                              cb(HttpResponse::newFileResponse(p.string()));
                           },
                           {Get});
 
-    // ---- Leaderboard
+    // ----- Leaderboard
     app().registerHandler("/api/quiz/submit",
                           [](const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&cb)
                           {
@@ -493,6 +501,7 @@ int main()
                               cb(jsonResp(ok));
                           },
                           {Post});
+
     app().registerHandler("/api/quiz/leaderboard",
                           [](const HttpRequestPtr &, std::function<void(const HttpResponsePtr &)> &&cb)
                           {
@@ -501,7 +510,7 @@ int main()
                           },
                           {Get});
 
-    // ---- AI endpoints
+    // ----- AI: chat + paraphrase (DeepSeek by env)
     app().registerHandler("/api/ai/chat",
                           [](const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&cb)
                           {
@@ -512,13 +521,13 @@ int main()
                                   e["error"] = "JSON required";
                                   return cb(jsonResp(e, k400BadRequest));
                               }
-                              auto &j = *js;
-                              std::string msg = j.get("message", "").asString();
+                              std::string msg = (*js).get("message", "").asString();
                               callChatCompletions(msg, "You are a helpful assistant for a C++ OOP learning app.",
                                                   [cb](Json::Value out)
                                                   { cb(jsonResp(out, out["ok"].asBool() ? k200OK : k502BadGateway)); });
                           },
                           {Post});
+
     app().registerHandler("/api/ai/paraphrase",
                           [](const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&cb)
                           {
@@ -529,8 +538,7 @@ int main()
                                   e["error"] = "JSON required";
                                   return cb(jsonResp(e, k400BadRequest));
                               }
-                              auto &j = *js;
-                              std::string text = j.get("text", "").asString();
+                              std::string text = (*js).get("text", "").asString();
                               std::string prompt = "Rewrite the following text in clear, concise English, preserving meaning.\n\n" + text;
                               callChatCompletions(prompt, "You paraphrase text for students. Keep it faithful and easy.",
                                                   [cb](Json::Value out)
