@@ -1,45 +1,47 @@
-﻿<!DOCTYPE html>
-<html lang=""en"">
-<head>
-  <meta charset=""UTF-8"" />
-  <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"" />
-  <title>OOP Quiz Bot</title>
-  <link rel=""stylesheet"" href=""style.css"" />
-</head>
-<body>
-<header>
-  <h1>OOP Quiz Bot Project</h1>
-  <nav>
-    <a href=""#notebook"" id=""tab-notebook"" class=""active"">Notebook</a>
-    <a href=""#quiz"" id=""tab-quiz"">Quiz</a>
-    <a href=""#ai"" id=""tab-ai"">AI Help</a>
-  </nav>
-</header>
+﻿<div class="menu">
+  <button id="moreBtn">⋯</button>
+  <div id="menuPanel" class="panel">
+    <button id="openAnnModal">Post Announcement</button>
+    <label class="upload">
+      Upload PDF (teacher)
+      <input type="file" id="pdfInput" accept="application/pdf" hidden>
+    </label>
+  </div>
+</div>
 
-<section id=""section-notebook"" class=""tab-section active"">
-  <h2>Notebook</h2>
-  <textarea id=""note-text"" rows=""8"" cols=""60"" placeholder=""Write your notes here...""></textarea><br />
-  <button id=""btn-save-note"">Save Note</button>
-  <button id=""btn-load-note"">Load Last Saved</button>
-  <p class=""status"" id=""note-status""></p>
-</section>
+<!-- simple modal -->
+<div id="annModal" class="modal" hidden>
+  <div class="sheet">
+    <h3>New Announcement</h3>
+    <textarea id="annText" rows="4" placeholder="Write announcement…"></textarea>
+    <div class="actions">
+      <button id="annSend">Send</button>
+      <button id="annClose">Close</button>
+    </div>
+  </div>
+</div>
 
-<section id=""section-quiz"" class=""tab-section"">
-  <h2>Quiz</h2>
-  <div id=""quiz-content""></div>
-  <button id=""btn-submit-quiz"">Submit Answers</button>
-  <p id=""quiz-result"" class=""status""></p>
-</section>
+<script>
+  const moreBtn = document.getElementById('moreBtn');
+  const panel = document.getElementById('menuPanel');
+  moreBtn.onclick = ()=> panel.classList.toggle('open');
 
-<section id=""section-ai"" class=""tab-section"">
-  <h2>AI Help</h2>
-  <input type=""text"" id=""ai-question"" size=""50"" placeholder=""Enter your question..."" />
-  <button id=""btn-ask-ai"">Ask AI</button>
-  <button id=""btn-ai-to-notebook"">Send to Notebook</button>
-  <div id=""ai-answer"" class=""ai-response""></div>
-</section>
+  const annModal = document.getElementById('annModal');
+  document.getElementById('openAnnModal').onclick = ()=> annModal.hidden=false;
+  document.getElementById('annClose').onclick = ()=> annModal.hidden=true;
 
-<footer><p>© 2025 OOP Quiz Bot Project</p></footer>
-<script src=""script.js""></script>
-</body>
-</html>
+  document.getElementById('annSend').onclick = async ()=>{
+    const text = document.getElementById('annText').value.trim();
+    if(!text) return;
+    await fetch('/api/announce', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text})});
+    alert('Announcement posted'); annModal.hidden=true;
+  };
+
+  document.getElementById('pdfInput').onchange = async (e)=>{
+    const f = e.target.files[0]; if(!f) return;
+    const fd = new FormData(); fd.append('file', f);
+    const r = await fetch('/api/upload', { method:'POST', body:fd });
+    const j = await r.json();
+    alert('Uploaded: ' + (j.saved?.[0] ?? ''));
+  };
+</script>

@@ -1,0 +1,63 @@
+<!doctype html><html lang="en"><head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Announcements</title>
+  <link rel="stylesheet" href="style.css">
+  </head><body>
+  <header class="topbar">
+    <div class="brand">Announcements</div><div class="grow"></div>
+    <a href="index.html">Home</a>
+  </header>
+  
+  <main style="max-width:980px;margin:24px auto;padding:0 16px">
+    <details style="margin-bottom:16px"><summary>New announcement (Teacher/Admin)</summary>
+      <div style="display:grid;gap:8px;margin-top:10px">
+        <input id="aTitle" placeholder="Title">
+        <textarea id="aText" rows="4" placeholder="Message"></textarea>
+        <button id="btnAnn">Publish</button>
+      </div>
+      <hr>
+      <div>
+        <label>Upload PDF(s): <input type="file" id="pdfs" accept="application/pdf" multiple></label>
+        <button id="btnUpload">Upload</button>
+      </div>
+    </details>
+  
+    <h2>Latest</h2>
+    <div id="list"></div>
+  
+    <h2>Shared files</h2>
+    <div id="files"></div>
+  </main>
+  
+  <footer class="site-footer"></footer>
+  <script src="theme.js"></script>
+  <script>
+  async function load(){
+    const r = await fetch('/api/announcements'); const j = await r.json();
+    const list = document.getElementById('list'); list.innerHTML='';
+    (j.items||[]).slice().reverse().forEach(it=>{
+      const div=document.createElement('div'); div.style.margin='10px 0';
+      div.innerHTML = `<strong>${it.title||''}</strong><div>${it.text||''}</div><small>by ${it.by||'system'}</small>`;
+      list.appendChild(div);
+    });
+    // show uploads by asking directory index – we don’t have it; show sample links when uploaded
+  }
+  load();
+  document.getElementById('btnAnn')?.addEventListener('click',async()=>{
+    const a={title:document.getElementById('aTitle').value,text:document.getElementById('aText').value};
+    const r=await fetch('/api/announcements',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(a)});
+    const j=await r.json(); alert(j.ok?'Published':'Failed'); load();
+  });
+  document.getElementById('btnUpload')?.addEventListener('click',async()=>{
+    const f=document.getElementById('pdfs').files; if(!f.length) return;
+    const fd=new FormData(); [...f].forEach(x=>fd.append('file',x));
+    const r=await fetch('/api/upload',{method:'POST',body:fd}); const j=await r.json();
+    alert(j.ok?'Uploaded':'Upload error');
+  });
+  document.querySelector('.site-footer').innerHTML =
+    `© Copyright by Team M^3 · Project OOPQuizBot ·
+     <a href="founders.html">Founders</a> ·
+     <a href="mailto:mahathirmahi40690@gmail.com">mahathirmahi40690@gmail.com</a>`;
+  </script>
+  </body></html>
+  

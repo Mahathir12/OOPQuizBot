@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Leaderboard • OOP Quiz</title>
+  <link rel="stylesheet" href="style.css"/>
+  <style>
+    .lb { max-width: 900px; margin: 40px auto; padding: 16px; }
+    .lb h1 { margin-bottom: 12px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 10px 12px; border-bottom: 1px solid #e6e6e6; text-align: left; }
+    tr:hover td { background: #fafbff; }
+  </style>
+</head>
+<body>
+  <div class="lb">
+    <h1>Leaderboard</h1>
+    <p>Top scores by topic.</p>
+    <table id="lbTable">
+      <thead><tr><th>#</th><th>User</th><th>Topic</th><th>Score</th><th>Time (ms)</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <script>
+  async function loadLB(){
+    const r = await fetch('/api/quiz/leaderboard');
+    const j = await r.json();
+    const rows = (j.rows||[]).slice().sort((a,b)=>{
+      if (b.score!==a.score) return b.score-a.score;
+      return (a.timeMs||0)-(b.timeMs||0);
+    }).slice(0,50);
+    const tb = document.querySelector('#lbTable tbody');
+    tb.innerHTML = rows.map((r,i)=>`
+      <tr>
+        <td>${i+1}</td>
+        <td>${r.user||''}</td>
+        <td>${r.topic||''}</td>
+        <td>${r.score||0}</td>
+        <td>${r.timeMs||0}</td>
+      </tr>`).join('');
+  }
+  loadLB();
+  </script>
+</body>
+</html>

@@ -1,4 +1,6 @@
-﻿build/
+build/
+Release/
+Debug/
 .vscode/
 *.log
 *.user
@@ -8,4 +10,5 @@
 *.cache
 data/notes/
 data/uploads/
+.lmstudio/
 *.env

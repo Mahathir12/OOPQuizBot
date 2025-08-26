@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Notebook — OOPQuizBot</title>
+  <link rel="stylesheet" href="notebook.css" />
+</head>
+<body>
+  <div class="toolbar">
+    <select id="mode">
+      <option value="pen">Pen</option>
+      <option value="pencil">Pencil</option>
+      <option value="highlighter">Highlighter</option>
+      <option value="eraser">Eraser</option>
+      <option value="text">Text</option>
+      <option value="line">Line</option>
+      <option value="rect">Rectangle</option>
+      <option value="circle">Circle</option>
+    </select>
+    <input id="color" type="color" value="#0B0F14" />
+    <input id="width" type="number" min="1" max="32" value="2" />
+    <button id="insertText">Text</button>
+    <button id="insertTable">Table</button>
+    <label><input type="checkbox" id="gridToggle"> Grid</label>
+    <label><input type="checkbox" id="rulerToggle"> Rulers</label>
+    <button id="clearCanvas">Clear</button>
+    <div class="right">
+      <button id="themeToggle">🌗 Theme</button>
+      <button id="saveBtn">💾 Save</button>
+      <button id="loadBtn">📂 Load</button>
+      <button id="printBtn">🖨️ Print</button>
+    </div>
+  </div>
+
+  <div class="sheet-wrap">
+    <div class="sheet">
+      <div id="gridOverlay"></div>
+      <div id="rulerX"></div><div id="rulerY"></div>
+      <div id="blocks"></div>
+      <canvas id="inkCanvas"></canvas>
+    </div>
+  </div>
+
+  <script src="notebook.js"></script>
+</body>
+</html>
