@@ -1,4 +1,4 @@
-﻿#include <drogon/drogon.h>
+#include <drogon/drogon.h>
 #include <json/json.h>
 #include <filesystem>
 #include <fstream>
@@ -567,6 +567,28 @@ resp->addHeader("Access-Control-Allow-Credentials","true"); });
                                                   { cb(jsonResp(out, out["ok"].asBool() ? k200OK : k502BadGateway)); });
                           },
                           {Post});
+    using namespace drogon;
+
+    // add this after app() configuration (before app().run()):
+    app().registerPostHandlingAdvice([](const HttpRequestPtr &req, const HttpResponsePtr &resp)
+                                     {
+    resp->addHeader("Access-Control-Allow-Origin", "*");
+    resp->addHeader("Access-Control-Allow-Credentials", "true");
+    resp->addHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    resp->addHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS"); });
+
+    // Handle preflight
+    app().registerHandler("/api/{1}",
+                          [](const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&cb)
+                          {
+                              auto r = HttpResponse::newHttpResponse();
+                              r->addHeader("Access-Control-Allow-Origin", "*");
+                              r->addHeader("Access-Control-Allow-Credentials", "true");
+                              r->addHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+                              r->addHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+                              cb(r);
+                          },
+                          {Options});
 
     LOG_INFO << "OOPQuizBot on http://localhost:" << port;
     app().run();
