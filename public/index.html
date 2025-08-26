@@ -1,47 +1,58 @@
-﻿<div class="menu">
-  <button id="moreBtn">⋯</button>
-  <div id="menuPanel" class="panel">
-    <button id="openAnnModal">Post Announcement</button>
-    <label class="upload">
-      Upload PDF (teacher)
-      <input type="file" id="pdfInput" accept="application/pdf" hidden>
-    </label>
-  </div>
-</div>
-
-<!-- simple modal -->
-<div id="annModal" class="modal" hidden>
-  <div class="sheet">
-    <h3>New Announcement</h3>
-    <textarea id="annText" rows="4" placeholder="Write announcement…"></textarea>
-    <div class="actions">
-      <button id="annSend">Send</button>
-      <button id="annClose">Close</button>
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>OOP Quiz Bot</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <link rel="stylesheet" href="style.css"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+</head>
+<body>
+<header class="header">
+  <div class="brand">OOP Quiz Bot</div>
+  <nav class="nav">
+    <a href="login.html">Login</a>
+    <a href="founders.html">Founders</a>
+    <a href="leaderboard.html">Leaderboard</a>
+  </nav>
+  <div class="menu">
+    <button id="themeToggle" class="btn">🌓</button>
+    <button id="menuBtn" class="menu-btn">⋯</button>
+    <div id="menuList" class="menu-list">
+      <a href="announcements.html">Announcements</a>
+      <a href="ai.html">Ask AI & Paraphrase</a>
+      <a href="notebook.html">Notebook</a>
+      <button onclick="doLogout()">Logout</button>
+      <button onclick="changePassword()">Account Settings</button>
     </div>
   </div>
+</header>
+
+<section class="hero">
+  <div class="container">
+    <h1>A calm, powerful space for<br/>learning C++ OOP</h1>
+    <p>Quizzes across 11 core OOP topics, a real notebook that supports pens, shapes, and code, plus AI help from DeepSeek for Q&A and paraphrasing.</p>
+    <div class="cta">
+      <a class="btn btn-primary" href="login.html">Get started</a>
+      <a class="btn btn-outline" href="notebook.html">Open Notebook</a>
+    </div>
+  </div>
+</section>
+
+<div class="container">
+  <div class="grid">
+    <div class="card"><strong>Topics</strong><br/>Encapsulation, Inheritance, Polymorphism, Abstraction, Diamond, Error Handling, File I/O, Ctors/Dtors, Static members, Friend, Generics.</div>
+    <div class="card"><strong>Notebook</strong><br/>Document+Canvas modes, pens & shapes, code blocks, tables & charts, page colors & patterns, print/PDF.</div>
+    <div class="card"><strong>AI</strong><br/>Ask questions, paraphrase text. Powered by DeepSeek via OpenAI‑compatible API.</div>
+  </div>
 </div>
 
-<script>
-  const moreBtn = document.getElementById('moreBtn');
-  const panel = document.getElementById('menuPanel');
-  moreBtn.onclick = ()=> panel.classList.toggle('open');
-
-  const annModal = document.getElementById('annModal');
-  document.getElementById('openAnnModal').onclick = ()=> annModal.hidden=false;
-  document.getElementById('annClose').onclick = ()=> annModal.hidden=true;
-
-  document.getElementById('annSend').onclick = async ()=>{
-    const text = document.getElementById('annText').value.trim();
-    if(!text) return;
-    await fetch('/api/announce', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text})});
-    alert('Announcement posted'); annModal.hidden=true;
-  };
-
-  document.getElementById('pdfInput').onchange = async (e)=>{
-    const f = e.target.files[0]; if(!f) return;
-    const fd = new FormData(); fd.append('file', f);
-    const r = await fetch('/api/upload', { method:'POST', body:fd });
-    const j = await r.json();
-    alert('Uploaded: ' + (j.saved?.[0] ?? ''));
-  };
-</script>
+<footer class="footer">
+  <div class="container">
+    <div>Copyright © Team M^3 · Project OOPQuizBot · <a href="mailto:mahathirmahi40690@gmail.com">mahathirmahi40690@gmail.com</a></div>
+  </div>
+</footer>
+<script src="app.js"></script>
+</body>
+</html>

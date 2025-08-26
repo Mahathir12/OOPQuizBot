@@ -370,6 +370,28 @@ int main()
                               cb(jsonResp(out));
                           },
                           {Post});
+    // Allow GitHub Pages origin and credentials
+    app().registerHandler("/api/{^.*$}", [](const drogon::HttpRequestPtr &req, std::function<void(const drogon::HttpResponsePtr &)> &&cb)
+                          {
+                              if (req->method() == drogon::Options)
+                              {
+                                  auto resp = drogon::HttpResponse::newHttpResponse();
+                                  resp->addHeader("Access-Control-Allow-Origin", "https://mahathir12.github.io");
+                                  resp->addHeader("Access-Control-Allow-Credentials", "true");
+                                  resp->addHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+                                  resp->addHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+                                  cb(resp);
+                                  return;
+                              }
+                              // fall through — actual handlers will respond; post-handling advice adds headers.
+                          },
+                          {drogon::Options});
+
+    app().registerPostHandlingAdvice([](const drogon::HttpRequestPtr &,
+                                        const drogon::HttpResponsePtr &resp)
+                                     {
+resp->addHeader("Access-Control-Allow-Origin","https://mahathir12.github.io");
+resp->addHeader("Access-Control-Allow-Credentials","true"); });
 
     // ----- Announcements (get/post)
     app().registerHandler("/api/announcements",

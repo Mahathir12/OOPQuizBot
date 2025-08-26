@@ -1,47 +1,86 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Notebook — OOPQuizBot</title>
-  <link rel="stylesheet" href="notebook.css" />
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Notebook</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="notebook.css">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github-dark.min.css">
+<script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/lib/common.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 </head>
-<body>
-  <div class="toolbar">
-    <select id="mode">
-      <option value="pen">Pen</option>
-      <option value="pencil">Pencil</option>
-      <option value="highlighter">Highlighter</option>
-      <option value="eraser">Eraser</option>
-      <option value="text">Text</option>
-      <option value="line">Line</option>
-      <option value="rect">Rectangle</option>
-      <option value="circle">Circle</option>
+<body onload="nb.init()">
+<header class="header">
+  <div class="brand">Notebook</div>
+  <div class="menu">
+    <button id="themeToggle" class="btn">🌓</button>
+    <button id="menuBtn" class="menu-btn">⋯</button>
+    <div id="menuList" class="menu-list">
+      <a href="index.html">Home</a>
+      <button onclick="doLogout()">Logout</button>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+  <div class="card toolbar">
+    <select id="modeSel">
+      <option value="doc">Document</option>
+      <option value="canvas">Canvas</option>
     </select>
-    <input id="color" type="color" value="#0B0F14" />
-    <input id="width" type="number" min="1" max="32" value="2" />
-    <button id="insertText">Text</button>
-    <button id="insertTable">Table</button>
-    <label><input type="checkbox" id="gridToggle"> Grid</label>
-    <label><input type="checkbox" id="rulerToggle"> Rulers</label>
-    <button id="clearCanvas">Clear</button>
-    <div class="right">
-      <button id="themeToggle">🌗 Theme</button>
-      <button id="saveBtn">💾 Save</button>
-      <button id="loadBtn">📂 Load</button>
-      <button id="printBtn">🖨️ Print</button>
-    </div>
+    <input id="pageName" placeholder="page name" value="default">
+    <button class="btn" onclick="nb.save()">Save</button>
+    <button class="btn" onclick="nb.load()">Load</button>
+    <button class="btn" onclick="nb.print()">Print / PDF</button>
+    <span style="flex:1"></span>
+    <select id="templateSel" onchange="nb.applyTemplate(this.value)">
+      <option value="">Templates…</option><option value="study">Study</option>
+      <option value="meeting">Meeting</option><option value="project">Project</option><option value="journal">Journal</option>
+    </select>
   </div>
 
-  <div class="sheet-wrap">
-    <div class="sheet">
-      <div id="gridOverlay"></div>
-      <div id="rulerX"></div><div id="rulerY"></div>
-      <div id="blocks"></div>
-      <canvas id="inkCanvas"></canvas>
-    </div>
+  <div id="docTools" class="card toolbar">
+    <button onclick="document.execCommand('bold')"><b>B</b></button>
+    <button onclick="document.execCommand('italic')"><i>I</i></button>
+    <button onclick="document.execCommand('insertUnorderedList')">• List</button>
+    <button onclick="nb.insertCode()">Code</button>
+    <button onclick="nb.insertTable()">Table</button>
+    <button onclick="nb.insertChart()">Chart</button>
+    <button onclick="nb.toggleLinks()">↗ Links</button>
+    <select id="pageColor" onchange="nb.setPageColor(this.value)">
+      <option value="#fff">Page: White</option><option value="#fdf6e3">Cream</option><option value="#f3f8ff">Ice</option>
+    </select>
+    <select id="pagePattern" onchange="nb.setPattern(this.value)">
+      <option value="none">Pattern: None</option><option value="ruled">Ruled</option>
+      <option value="grid">Grid</option><option value="dots">Dots</option>
+    </select>
   </div>
 
-  <script src="notebook.js"></script>
+  <div id="canvasTools" class="card toolbar" style="display:none">
+    <select id="tool">
+      <option value="pen">Pen</option><option value="pencil">Pencil</option>
+      <option value="marker">Marker</option><option value="eraser">Eraser</option>
+      <option value="line">Line</option><option value="arrow">Arrow</option>
+      <option value="rect">Rect</option><option value="circle">Circle</option>
+      <option value="ruler">Ruler</option><option value="text">Text</option>
+    </select>
+    <input type="color" id="color" value="#1f2937">
+    <input type="range" id="size" min="1" max="40" value="4">
+    <button class="btn" onclick="nb.clear()">Clear</button>
+  </div>
+
+  <div class="board">
+    <div id="doc" class="note-text" contenteditable="true"></div>
+    <div id="canvasWrap" class="canvas-wrap" style="display:none">
+      <canvas id="noteCanvas"></canvas>
+    </div>
+  </div>
+</div>
+
+<footer class="footer">Session resumes where you left—use “Save” to persist.</footer>
+<script src="app.js"></script>
+<script src="notebook.js"></script>
 </body>
 </html>

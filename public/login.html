@@ -1,21 +1,22 @@
-<!doctype html>
-<html lang="en" data-theme="dark">
-<head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Login · OOP Quiz Bot</title>
-  <link rel="stylesheet" href="style.css"/>
-</head>
-<body>
-  <div class="auth-card glass">
-    <h1>Login</h1>
-    <form id="loginForm">
-      <input id="username" placeholder="Username" required/>
-      <input id="password" type="password" placeholder="Password" required/>
-      <button class="primary" type="submit">Login</button>
-    </form>
-    <p class="muted">No account? Sign up directly in the app top‑right.</p>
+<!doctype html><html><head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Login — OOP Quiz Bot</title><link rel="stylesheet" href="style.css">
+  </head><body>
+  <header class="header"><div class="brand">Sign in</div><div class="menu"><button id="themeToggle" class="btn">🌓</button></div></header>
+  <div class="container grid">
+    <div class="card">
+      <div style="font-weight:600;margin-bottom:8px">Sign in</div>
+      <input id="user" placeholder="username" style="width:100%;margin-bottom:8px">
+      <input id="pass" type="password" placeholder="password" style="width:100%;margin-bottom:8px">
+      <button class="btn btn-primary" onclick="doLogin()">Login</button>
+    </div>
+    <div class="card">
+      <div style="font-weight:600;margin-bottom:8px">Create account</div>
+      <input id="newuser" placeholder="username" style="width:100%;margin-bottom:8px">
+      <input id="newpass" type="password" placeholder="password" style="width:100%;margin-bottom:8px">
+      <select id="role" style="width:100%;margin-bottom:8px"><option>Student</option><option>Teacher</option><option>Admin</option></select>
+      <button class="btn" onclick="doSignup()">Sign up</button>
+    </div>
   </div>
-  <script src="login.js"></script>
-</body>
-</html>
+  <script src="app.js"></script></body></html>
+  
