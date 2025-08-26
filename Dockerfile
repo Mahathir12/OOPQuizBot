@@ -1,34 +1,34 @@
-# Dockerfile (Linux, works on Render & locally)
-FROM debian:bookworm
+# ---------- Stage 1: build ----------
+FROM drogonframework/drogon:latest AS build
+WORKDIR /src
 
-ENV DEBIAN_FRONTEND=noninteractive
+# Copy sources
+COPY CMakeLists.txt .
+COPY src ./src
+COPY include ./include
+COPY public ./public
+COPY config.json .  # optional
 
-RUN apt-get update && apt-get install -y \
-  build-essential cmake git curl ca-certificates \
-  libjsoncpp-dev uuid-dev zlib1g-dev libssl-dev libbrotli-dev \
-  && rm -rf /var/lib/apt/lists/*
+# Configure & build release
+RUN cmake -DCMAKE_BUILD_TYPE=Release .
+RUN cmake --build . --target OOPQuizBot -- -j$(nproc)
 
-# Build and install Trantor
-RUN git clone --depth 1 https://github.com/an-tao/trantor.git \
- && cd trantor && mkdir build && cd build \
- && cmake .. -DCMAKE_BUILD_TYPE=Release \
- && make -j$(nproc) && make install
-
-# Build and install Drogon
-RUN git clone --depth 1 https://github.com/drogonframework/drogon.git \
- && cd drogon && mkdir build && cd build \
- && cmake .. -DCMAKE_BUILD_TYPE=Release \
- && make -j$(nproc) && make install
-
+# ---------- Stage 2: runtime ----------
+FROM ubuntu:22.04
 WORKDIR /app
-COPY . /app
 
-RUN mkdir -p build && cd build \
- && cmake .. -DCMAKE_BUILD_TYPE=Release \
- && make -j$(nproc)
+# Drogon binary links to OpenSSL + zlib
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libssl3 zlib1g ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
 
+# Copy the app and static assets
+COPY --from=build /src/OOPQuizBot /app/OOPQuizBot
+COPY --from=build /src/public /app/public
+
+# Render passes $PORT; we just listen on it
 ENV PORT=8080
 EXPOSE 8080
 
-# DeepSeek env are set in Render dashboard (do NOT hardcode secrets here)
-CMD ["./build/OOPQuizBot"]
+# Start server
+CMD ["./OOPQuizBot"]
