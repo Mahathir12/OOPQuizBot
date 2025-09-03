@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1" name="viewport"/>
+<title>OOPQuizBot</title>
+<link href="assets/favicon.png" rel="icon"/>
+<style>
+    :root{
+      --bg:#0c0c0c;
+      --text:#111;
+      --white:#fff;
+      --muted:#888;
+      --accent:#0f62fe;
+      --shadow:0 10px 30px rgba(0,0,0,.15);
+      --radius:18px;
+      --brand-size:20px;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Noto Sans, Apple Color Emoji, Segoe UI Emoji;}
+    body{color:#111; background:#fff; line-height:1.5; overflow-x:hidden;}
+
+    /* ===== Header ===== */
+    .site-header{
+      position:fixed; top:0; left:0; right:0; z-index:50;
+      display:flex; align-items:center; justify-content:space-between;
+      padding:12px 28px;
+      background:rgba(255,255,255,.06);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-bottom:1px solid rgba(255,255,255,.15);
+      transition:all .3s ease;
+      color:#fff;
+    }
+    .site-header.scrolled{ background:rgba(0,0,0,.75); border-bottom-color:rgba(255,255,255,.08); }
+    .brand{ font-weight:700; letter-spacing:.3px; font-size:var(--brand-size);}
+    .login-btn{
+      appearance:none; border:0; cursor:pointer;
+      background:#fff; color:#111; padding:8px 16px; border-radius:999px;
+      font-weight:600; box-shadow: var(--shadow);
+      transition:transform .08s ease;
+    }
+    .login-btn:active{ transform:translateY(1px) }
+
+    .nav-links{ display:flex; gap:10px; align-items:center; }
+    .nav-links .pill{
+      padding:8px 14px; border-radius:999px; text-decoration:none; color:#fff;
+      border:1px solid rgba(255,255,255,.2); font-weight:600; font-size:14px;
+    }
+    .nav-links .pill:hover{ background:rgba(255,255,255,.12) }
+    .header-actions{ display:flex; gap:10px; align-items:center; position:relative; }
+    .icon-btn{ appearance:none; border:0; background:transparent; color:#fff; cursor:pointer; padding:8px; border-radius:10px; }
+    .icon-btn:hover{ background:rgba(255,255,255,.12) }
+    .more-menu{
+      position:absolute; right:80px; top:42px; display:none; flex-direction:column; gap:6px;
+      background:rgba(0,0,0,.85); border:1px solid rgba(255,255,255,.12);
+      border-radius:12px; padding:10px; min-width:180px; box-shadow: var(--shadow);
+    }
+    .more-menu.show{ display:flex }
+    .more-menu a, .more-menu .linklike{
+      color:#fff; text-decoration:none; padding:8px 10px; border-radius:8px; display:block; text-align:left;
+      background:transparent; border:0; font:inherit; cursor:pointer;
+    }
+    .more-menu a:hover, .more-menu .linklike:hover{ background:rgba(255,255,255,.08) }
+
+    /* Light theme overrides */
+    :root[data-theme='light']{
+      --bg:#f8f9fb;
+      --text:#111;
+      --white:#fff;
+      --muted:#666;
+    }
+    :root[data-theme='light'] body{ background:#f8f9fb; color:#111; }
+    :root[data-theme='light'] .site-header{ background:rgba(255,255,255,.7); color:#111; border-bottom-color:rgba(0,0,0,.08) }
+    :root[data-theme='light'] .nav-links .pill{ color:#111; border-color:rgba(0,0,0,.15) }
+    :root[data-theme='light'] .nav-links .pill:hover{ background:rgba(0,0,0,.06) }
+    :root[data-theme='light'] .icon-btn{ color:#111 }
+    :root[data-theme='light'] .login-btn{ background:#111; color:#fff }
+    :root[data-theme='light'] .dark{ background:#fff; color:#111 }
+    :root[data-theme='light'] .dark .divider{ background:linear-gradient(90deg, rgba(0,0,0,.16), rgba(0,0,0,.06)); }
+
+
+    /* ===== Hero ===== */
+    .hero{
+      min-height:100vh; display:flex; align-items:center; position:relative; color:#fff;
+      background: url('assets/hero.jpg') center/cover no-repeat fixed; background-image: image-set(url('assets/hero.avif') type('image/avif') 1x, url('assets/hero.jpg') type('image/jpeg') 1x);
+    }
+    .hero::after{
+      content:""; position:absolute; inset:0;
+      background: radial-gradient(ellipse at 20% 15%, rgba(0,0,0,.3), rgba(0,0,0,.75) 60%, rgba(0,0,0,.9));
+    }
+    .hero-inner{ position:relative; z-index:1; width:min(1100px, 92%); margin: 0 auto; padding-top:64px;}
+    .hero h1{ font-size: clamp(40px, 7vw, 68px); line-height:1.05; margin:0 0 16px; font-weight:800; letter-spacing:.2px;}
+    .hero p{ color: rgba(255,255,255,.85); font-size:18px}
+
+    /* ===== Section primitives ===== */
+    section{ padding: 80px 0 }
+    .container{ width:min(1100px, 92%); margin:0 auto; }
+    .eyebrow{ text-transform:uppercase; letter-spacing:.2em; font-size:13px; color:#666 }
+    .divider{ height:2px; background:linear-gradient(90deg, #ddd, #f7f7f7); margin:32px 0 }
+    .dark{ background:#000; color:#fff }
+    .dark .divider{ background:linear-gradient(90deg, rgba(255,255,255,.2), rgba(255,255,255,.06)) }
+
+    /* ===== Vision ===== */
+    .vision{
+      display:grid; grid-template-columns: 1.2fr 1fr; gap:40px; align-items:center;
+    }
+    .vision p{ color:#ddd; max-width:560px; }
+    .vision img{
+      width:100%; border-radius:16px; box-shadow: var(--shadow);
+      display:block; filter: drop-shadow(0 12px 24px rgba(0,0,0,.35));
+    }
+
+    /* ===== Team Cards ===== */
+    .team-wrap{ display:grid; gap:24px;}
+    .card{
+      background:#fff; border-radius:24px; box-shadow: var(--shadow); overflow:hidden;
+      display:grid; grid-template-columns: 1fr 1.2fr; min-height:520px;
+    }
+    .card .info{ padding:42px 36px; display:flex; flex-direction:column; gap:36px;}
+    .card .info h3{ margin:0; font-size:20px}
+    .muted{ color:#6a6a6a; }
+    .card img{ width:100%; height:100%; object-fit:cover; }
+    .card.reverse{ grid-template-columns: 1.2fr 1fr; }
+    .card.reverse .info{ order:2 }
+
+    /* ===== Partners / CTA ===== */
+    .partners img{ width:min(740px, 90%); display:block; margin: 16px 0 0 }
+    .cta h2{ font-size: clamp(26px, 4.6vw, 48px); line-height:1.08; margin: 12px 0 6px }
+    .cta p{ font-size: clamp(18px, 3vw, 28px); }
+
+    /* ===== Contact form ===== */
+    form{ margin-top:26px; max-width:820px }
+    label{ display:block; font-size:14px; color:#666; margin:18px 0 6px}
+    input[type="email"]{
+      width:100%; padding:16px 18px; border-radius:999px; border:1px solid #d7d7d7; font-size:16px;
+    }
+    .row{ display:flex; align-items:center; gap:12px; margin-top:12px; }
+    .send{
+      margin-top:18px; width:280px; height:44px; border-radius:999px; border:0; cursor:pointer;
+      background:#000; color:#fff; font-weight:700; letter-spacing:.4px; transition:transform .08s ease;
+    }
+    .send:active{ transform:translateY(1px) }
+
+    /* ===== Footer ===== */
+    footer{ padding: 48px 0 24px; border-top:1px solid #eee; margin-top:48px; }
+    .footer-grid{ display:grid; grid-template-columns: 1.2fr 1fr 1fr 1fr; gap:24px; }
+    footer h4{ margin:0 0 10px; font-size:14px; letter-spacing:.08em; color:#333; text-transform:uppercase}
+    footer a{ color:#111; text-decoration:none }
+    footer a:hover{ text-decoration:underline }
+    .copyright{ color:#888; font-size:13px; margin-top:24px}
+
+    /* ===== Reveal animation ===== */
+    .reveal{ opacity:0; transform: translateY(12px); transition: all .7s ease}
+    .reveal.show{ opacity:1; transform: translateY(0)}
+
+    @media (max-width: 920px){
+      .vision{ grid-template-columns: 1fr }
+      .card, .card.reverse{ grid-template-columns:1fr; min-height:unset; }
+      .card .info{ order:0 }
+    }
+  </style>
+</head>
+<body>
+<!-- Fixed header (glass) -->
+<header class="site-header" id="siteHeader">
+<a class="brand" href="index.html">OOPQuizBot</a>
+<nav aria-label="Primary" class="nav-links">
+<a class="pill" href="announcements.html">Announcements</a>
+<a class="pill" href="ask-ai.html">Ask AI</a>
+<a class="pill" href="quiz.html">Quiz</a>
+<a class="pill" href="notebook.html">Notebook</a>
+</nav>
+<div class="header-actions">
+<button aria-label="Toggle light/dark mode" class="icon-btn" id="themeToggle" title="Light/Dark">
+<!-- sun / moon icon, toggled in JS -->
+<svg aria-hidden="true" height="20" id="iconMoon" viewbox="0 0 24 24" width="20"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 1 0 9.79 9.79z" fill="currentColor"></path></svg>
+<svg aria-hidden="true" height="20" id="iconSun" style="display:none" viewbox="0 0 24 24" width="20"><path d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12Zm0-16a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0V3a1 1 0 0 1 1-1Zm0 18a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0v-1a1 1 0 0 1 1-1Zm10-9a1 1 0 0 1-1 1h-1a1 1 0 1 1 0-2h1a1 1 0 0 1 1 1ZM4 12a1 1 0 0 1-1 1H2a1 1 0 1 1 0-2h1a1 1 0 0 1 1 1Zm13.66 6.66a1 1 0 0 1-1.41 0l-.7-.7a1 1 0 1 1 1.42-1.42l.69.7a1 1 0 0 1 0 1.41ZM7.05 6.05a1 1 0 0 1-1.41 0l-.7-.7A1 1 0 0 1 6.34 3.93l.7.7a1 1 0 0 1 0 1.41Zm11.31-2.12a1 1 0 0 1 0 1.41l-.7.7A1 1 0 1 1 16.24 4l.7-.7a1 1 0 0 1 1.41 0ZM6.34 18.07a1 1 0 0 1 0-1.42l.7-.69A1 1 0 1 1 8.46 17l-.7.69a1 1 0 0 1-1.41 0Z" fill="currentColor"></path></svg>
+</button>
+<button aria-expanded="false" aria-haspopup="menu" class="icon-btn" id="moreBtn" title="More">
+<svg aria-hidden="true" height="20" viewbox="0 0 24 24" width="20">
+<circle cx="5" cy="12" fill="currentColor" r="2"></circle>
+<circle cx="12" cy="12" fill="currentColor" r="2"></circle>
+<circle cx="19" cy="12" fill="currentColor" r="2"></circle>
+</svg>
+</button>
+<div aria-label="More options" class="more-menu" id="moreMenu" role="menu">
+<a href="revise.html" role="menuitem">Revise Module</a>
+<a href="founder.html" role="menuitem">Founder</a>
+<a href="leaderboard.html" role="menuitem">Leaderboard</a>
+<a href="account.html" role="menuitem">Account Settings</a>
+<button class="linklike" id="logoutBtn" role="menuitem">Logout</button>
+</div>
+<a class="login-btn" href="login.html" id="loginBtn">Login</a>
+</div>
+</header>
+<!-- Hero -->
+<section class="hero">
+<div class="hero-inner">
+<h1>Sharpen your OOP<br/>skills with every<br/>click.</h1>
+<p>Because practice is the best teacher.</p>
+</div>
+</section>
+<!-- Vision -->
+<section class="dark">
+<div class="container">
+<div class="eyebrow reveal">VISION</div>
+<div class="divider"></div>
+<div class="vision">
+<p class="reveal" style="font-size:18px;">
+          OOP isn’t just about coding—it’s about thinking smart. It teaches us to break problems into objects, focus on what matters,
+          reuse what works, and stay flexible when things change. Just like objects build powerful systems, every concept you master
+          brings you closer to becoming a stronger programmer.
+        </p>
+<!-- Replace this image with your own if you want -->
+<!-- Upload: assets/vision_car.jpg -->
+<picture class="reveal"><source srcset="assets/vision_car.avif" type="image/avif"/><img alt="Vision illustration" loading="lazy" src="assets/vision_car.jpg"/></picture>
+</div>
+</div>
+</section>
+<!-- Team -->
+<section>
+<div class="container team-wrap">
+<!-- Card 1 -->
+<article class="card reveal">
+<div class="info">
+<h3>Mahathir Mohammad Mahi</h3>
+<div class="muted">Rajshahi University of Engineering &amp; Technology</div>
+<div class="muted">Department of Electrical &amp; Computer Engineering</div>
+</div>
+<!-- Upload: assets/team_mahi.jpg -->
+<picture><source srcset="assets/team_mahi.avif" type="image/avif"/><img alt="Mahathir Mohammad Mahi" loading="lazy" src="assets/team_mahi.jpg"/></picture>
+</article>
+<!-- Card 2 -->
+<article class="card reverse reveal">
+<div class="info">
+<h3>Moshiour Rahman</h3>
+<div class="muted">Department of Electrical &amp; Computer Engineering</div>
+<div class="muted">Rajshahi University of Engineering &amp; Technology</div>
+</div>
+<!-- Placeholder image. If you have a dedicated portrait, drop it here -->
+<!-- Upload: assets/team_moshiour.jpg (optional) -->
+<picture><source srcset="assets/team_moshiour.avif" type="image/avif"/><img alt="Moshiour Rahman" loading="lazy" src="assets/team_moshiour.jpg"/></picture>
+</article>
+<!-- Card 3 -->
+<article class="card reveal">
+<div class="info">
+<h3>Mobasser Siam</h3>
+<div class="muted">Department of Electrical &amp; Computer Engineering</div>
+</div>
+<!-- Replace this image with your own if you want -->
+<!-- Upload: assets/team_siam.jpg -->
+<picture><source srcset="assets/team_siam.avif" type="image/avif"/><img alt="Mobasser Siam" loading="lazy" src="assets/team_siam.jpg"/></picture>
+</article>
+</div>
+</section>
+<!-- Partners + CTA -->
+<section class="partners">
+<div class="container">
+<div class="divider"></div>
+<div class="eyebrow reveal">COLLABORATION</div>
+<h2 class="reveal" style="font-size: clamp(30px, 6vw, 56px); margin:8px 0 12px;">Our Coding Partners</h2>
+<!-- Replace this image with your own if you want -->
+<!-- Upload: assets/partners_logos.jpg -->
+<picture class="reveal"><source srcset="assets/partners_logos.png" type="image/png"/><img alt="Partners" loading="lazy" src="assets/partners_logos.png"/></picture>
+</div>
+</section>
+<section class="cta">
+<div class="container">
+<p class="reveal" style="font-weight:700; font-size: clamp(28px, 5.4vw, 44px);">
+        If you see a bug, don’t panic—it’s just our bot trying to be creative.
+        <br>Call the founders!
+      </br></p>
+<!-- Contact form -->
+<form class="reveal" id="contactForm">
+<label for="email">Email *</label>
+<input id="email" placeholder="you@example.com" required="" type="email"/>
+<div class="row">
+<input id="consent" type="checkbox"/>
+<label for="consent" style="margin:0;">I allow the founders to debug my pain. *</label>
+</div>
+<button class="send">Send</button>
+</form>
+</div>
+</section>
+<!-- Footer -->
+<footer>
+<div class="container">
+<div class="footer-grid">
+<div>
+<div style="font-weight:800; font-size:22px; margin-bottom:8px">OOPQuizBot</div>
+<div style="opacity:.8">‎</div>
+</div>
+<div>
+<h4>COMPANY</h4>
+</div>
+<div>
+<h4>CONTACT</h4>
+<div>mahathirmahi40690@gmail.com</div>
+<div>moshiourrahman145@gmail.com</div>
+<div>mobasser80@gmail.com</div>
+</div>
+<div>
+<h4>LEGAL</h4>
+<a href="#">Terms &amp; Conditions</a><br>
+<a href="#">Privacy Policy</a>
+</br></div>
+</div>
+<div class="copyright">© 2035 by OOPQuizBot. Made with Wix Studio™</div>
+</div>
+</footer>
+<!-- Modal for Login -->
+
+<script>
+    // Sticky header color swap
+    const header = document.getElementById('siteHeader');
+    const toggleHeader = () => {
+      if (window.scrollY > 10) header.classList.add('scrolled');
+      else header.classList.remove('scrolled');
+    };
+    toggleHeader();
+    window.addEventListener('scroll', toggleHeader, {passive:true});
+
+    
+    // Theme toggle
+    const root = document.documentElement;
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme) root.setAttribute('data-theme', savedTheme);
+    const themeToggle = document.getElementById('themeToggle');
+    const iconMoon = document.getElementById('iconMoon');
+    const iconSun = document.getElementById('iconSun');
+    const setIcon = () => {
+      const light = root.getAttribute('data-theme') === 'light';
+      iconSun.style.display = light ? 'none' : 'inline';
+      iconMoon.style.display = light ? 'inline' : 'none';
+    };
+    setIcon();
+    themeToggle.addEventListener('click', () => {
+      const isLight = root.getAttribute('data-theme') === 'light';
+      root.setAttribute('data-theme', isLight ? 'dark' : 'light');
+      localStorage.setItem('theme', isLight ? 'dark' : 'light');
+      setIcon();
+    });
+
+    // Kebab (three-dot) menu
+    const moreBtn = document.getElementById('moreBtn');
+    const moreMenu = document.getElementById('moreMenu');
+    moreBtn.addEventListener('click', () => {
+      const show = !moreMenu.classList.contains('show');
+      moreMenu.classList.toggle('show', show);
+      moreBtn.setAttribute('aria-expanded', String(show));
+    });
+    document.addEventListener('click', (e) => {
+      if (!moreMenu.contains(e.target) && e.target !== moreBtn) {
+        moreMenu.classList.remove('show'); moreBtn.setAttribute('aria-expanded','false');
+      }
+    });
+
+    // Logout placeholder
+    const logoutBtn = document.getElementById('logoutBtn');
+    logoutBtn.addEventListener('click', () => {
+      localStorage.clear();
+      alert('Logged out.');
+      location.href = 'login.html';
+    });
+
+
+    // Login modal
+    const loginBtn = document.getElementById('loginBtn');
+    const loginModal = document.getElementById('loginModal');
+    loginBtn.addEventListener('click', () => { window.location.href = 'login.html'; });
+
+    // Reveal on scroll
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('show'); });
+    }, { threshold: .2 });
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+    // Fake contact form submit
+    document.getElementById('contactForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const email = document.getElementById('email').value.trim();
+      const consent = document.getElementById('consent').checked;
+      if (!email || !consent) return alert('Please enter your email and give consent.');
+      alert('Thanks! We will reach out to ' + email);
+      e.target.reset();
+    });
+  </script>
+<!--
+    ===== Replace images easily =====
+    Replace the following files in the /assets folder:
+      - hero.jpg          (Background for the hero)
+      - vision_car.jpg    (Image used in the Vision section)
+      - team_mahi.jpg     (Portrait #1)
+      - team_siam.jpg     (Portrait #2)
+      - partners_logos.jpg (Logos row)
+    Keep the file names the same and just drop your new images into /assets.
+  -->
+<script src="assets/js/app.js"></script>
+</body>
+</html>
