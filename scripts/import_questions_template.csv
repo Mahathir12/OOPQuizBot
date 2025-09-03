@@ -1,0 +1,3 @@
+chapter,section,type,title,prompt,code,options,answer,expectedOutput,explanation,sampleAnswer
+1,review,mcq,Which keyword declares a class?,,,""[""struct"", ""class"", ""object"", ""typedef""]"",1,,,,
+1,predict,predict,,,""#include <iostream>\nint main(){int x=1; std::cout<<x++;}"" ,,,1,Explain ++ post-increment semantics.,

@@ -1,0 +1,43 @@
+{
+  "chapters": [
+    {
+      "id": "ch1",
+      "title": "C++ Basics & OOP Overview",
+      "sections": {
+        "Mastery": [
+          {
+            "type": "mcq",
+            "question": "Which C++ feature best supports data hiding?",
+            "choices": ["Inheritance", "Encapsulation", "Polymorphism", "Templates"],
+            "answer": "Encapsulation",
+            "explanation": "Encapsulation hides an object’s internal state behind a public interface."
+          }
+        ],
+        "Review": [
+          {
+            "type": "short",
+            "question": "Define a class and an object in one sentence.",
+            "answer": "A class is a blueprint; an object is an instance created from that blueprint.",
+            "explanation": "Classes describe structure/behavior; objects are concrete realizations."
+          }
+        ],
+        "Cumulative": [
+          {
+            "type": "predict",
+            "question": "Predict the output:\n\nint x=3; cout<<x++<<\" \"<<++x; ",
+            "answer": "3 5",
+            "explanation": "Post‑increment prints 3 then x becomes 4; pre‑increment makes it 5 then prints 5."
+          }
+        ],
+        "Exercises": [
+          {
+            "type": "code",
+            "question": "Write a class `Point` with private x,y and a method `double dist(const Point&)`.",
+            "answer": "Any correct class with sqrt((dx)^2+(dy)^2).",
+            "explanation": "Use encapsulation; the method uses the public API to compute distance."
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,55 +1,73 @@
-﻿#ifndef NOTEMODULE_H
-#define NOTEMODULE_H
-
+#pragma once
 #include "BotBase.h"
-#include <string>
-#include <string_view>
-#include <vector>
 #include <fstream>
-#include <filesystem>
-#include <stdexcept>
-#include <iostream>
+#include <vector>
 
-class NoteModule : virtual public BotBase
-{
-private:
-  std::vector<std::string> pages;
+// Forward declare a friend function for exporting notes
+class NoteModule;
+void exportNotesToTxt(const NoteModule& nm, const std::string& username, const std::string& outPath);
 
-  static void ensureParentDir(const std::string &filename)
-  {
-    namespace fs = std::filesystem;
-    fs::path p(filename);
-    if (p.has_parent_path())
-      fs::create_directories(p.parent_path());
-  }
-
+class NoteModule : public virtual BotBase {
 public:
-  NoteModule(const std::string &name = "NotebookBot") : BotBase(name) {}
-  ~NoteModule() {}
+    using BotBase::BotBase;
 
-  std::string getModuleName() const override { return "NoteModule"; }
+    std::string name() const override { return "NoteModule"; }
 
-  // Save to file (handles dir creation)
-  void saveNoteToFile(const std::string &filename, std::string_view content)
-  {
-    ensureParentDir(filename);
-    std::ofstream ofs(filename, std::ios::binary);
-    if (!ofs.is_open())
-      throw std::runtime_error("Cannot open file for writing: " + filename);
-    ofs.write(content.data(), static_cast<std::streamsize>(content.size()));
-    ofs.close();
-    pages.emplace_back(content);
-    std::cout << "[NoteModule] Saved note to " << filename << std::endl;
-  }
+    // Save a note under data/pages/<username>/<title>.txt
+    void saveNoteToFile(const std::string& username,
+                        const std::string& title,
+                        const std::string& content) const {
+        auto dir = std::filesystem::path(dataRoot_) / "pages" / username;
+        std::filesystem::create_directories(dir);
+        auto file = dir / (title + ".txt");
+        std::ofstream ofs(file, std::ios::out | std::ios::binary);
+        if(!ofs) {
+            throw std::runtime_error("Cannot open file for writing: " + file.string());
+        }
+        ofs << content;
+    }
 
-  // Load from file (empty string if missing)
-  std::string loadNoteFromFile(const std::string &filename)
-  {
-    std::ifstream ifs(filename, std::ios::binary);
-    if (!ifs.is_open())
-      return std::string{};
-    return std::string((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
-  }
+    std::string loadNoteFromFile(const std::string& username,
+                                 const std::string& title) const {
+        auto file = std::filesystem::path(dataRoot_) / "pages" / username / (title + ".txt");
+        std::ifstream ifs(file, std::ios::in | std::ios::binary);
+        if(!ifs) {
+            throw std::runtime_error("Cannot open file for reading: " + file.string());
+        }
+        std::ostringstream oss;
+        oss << ifs.rdbuf();
+        return oss.str();
+    }
+
+    std::vector<std::string> listNotes(const std::string& username) const {
+        std::vector<std::string> titles;
+        auto dir = std::filesystem::path(dataRoot_) / "pages" / username;
+        if(std::filesystem::exists(dir)) {
+            for(auto& p : std::filesystem::directory_iterator(dir)) {
+                if(p.is_regular_file()) {
+                    auto stem = p.path().stem().string();
+                    titles.push_back(stem);
+                }
+            }
+        }
+        return titles;
+    }
+
+    friend void ::exportNotesToTxt(const NoteModule& nm, const std::string& username, const std::string& outPath);
 };
 
-#endif // NOTEMODULE_H
+inline void exportNotesToTxt(const NoteModule& nm, const std::string& username, const std::string& outPath) {
+    // Simple "friend" helper that exports all notes for a user into a single text bundle.
+    auto titles = nm.listNotes(username);
+    std::ofstream ofs(outPath, std::ios::out | std::ios::binary);
+    if(!ofs) throw std::runtime_error("Cannot open export file: " + outPath);
+    ofs << "OOPQuizBot Notes Export for user: " << username << "\n\n";
+    for(const auto& t : titles) {
+        ofs << "==== " << t << " ====\n";
+        try {
+            ofs << nm.loadNoteFromFile(username, t) << "\n\n";
+        } catch(...) {
+            ofs << "[Error reading " << t << "]\n\n";
+        }
+    }
+}

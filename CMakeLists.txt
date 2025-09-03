@@ -1,27 +1,36 @@
+﻿# CMakeLists.txt — root of OOPQuizBot
 cmake_minimum_required(VERSION 3.20)
-project(OOPQuizBot CXX)
 
+project(oop_quiz_bot VERSION 1.0 LANGUAGES CXX)
+
+# C++ settings
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
-# If you use vcpkg:
-#   cmake -S . -B build -G "Visual Studio 17 2022" -A x64 ^
-#         -DCMAKE_TOOLCHAIN_FILE=C:/dev/vcpkg/scripts/buildsystems/vcpkg.cmake ^
-#         -DVCPKG_TARGET_TRIPLET=x64-windows -DCMAKE_BUILD_TYPE=Release
-
+# If you pass vcpkg toolchain on the command line, CMake will find packages from vcpkg.
+# Dependencies
 find_package(Drogon CONFIG REQUIRED)
-find_package(jsoncpp CONFIG REQUIRED)
+find_package(JsonCpp CONFIG REQUIRED)
 
-add_executable(OOPQuizBot
-  src/main.cpp
-  # If you really need this, keep it; otherwise remove the file from disk.
-  # src/AIHelper.cpp
+# Sources
+file(GLOB SRC "src/*.cpp")
+
+add_executable(oop_quiz_bot ${SRC})
+target_include_directories(oop_quiz_bot PRIVATE include)
+
+# Link libs from vcpkg
+target_link_libraries(oop_quiz_bot
+    PRIVATE
+    Drogon::Drogon
+    JsonCpp::JsonCpp
 )
 
-target_include_directories(OOPQuizBot PRIVATE ${CMAKE_SOURCE_DIR}/include)
-target_link_libraries(OOPQuizBot PRIVATE Drogon::Drogon JsonCpp::JsonCpp)
-
-# Silence MSVC getenv warnings (optional)
+# Put binaries under build/<config> on MSVC (so .\build\Release\oop_quiz_bot.exe exists)
 if (MSVC)
-  target_compile_definitions(OOPQuizBot PRIVATE _CRT_SECURE_NO_WARNINGS)
+  add_definitions(-DNOMINMAX)
+  set_target_properties(oop_quiz_bot PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}/Release"
+    RUNTIME_OUTPUT_DIRECTORY_DEBUG   "${CMAKE_BINARY_DIR}/Debug"
+  )
 endif()

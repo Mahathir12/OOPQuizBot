@@ -1,0 +1,60 @@
+{
+  "chapter": 11,
+  "questions": [
+    {
+      "id": "c11_r1",
+      "type": "mcq",
+      "category": "review",
+      "prompt": "Which of the following best describes *encapsulation* in OOP?",
+      "options": [
+        "Binding data and methods together",
+        "Deriving a class from another",
+        "Overriding a base-class method",
+        "Selecting among alternatives at runtime"
+      ],
+      "answer": "Binding data and methods together",
+      "explanation": "Encapsulation groups related state and behavior inside a class."
+    },
+    {
+      "id": "c11_m1",
+      "type": "mcq",
+      "category": "mastery",
+      "prompt": "`virtual` functions enable which form of polymorphism?",
+      "options": [
+        "Compile-time",
+        "Run-time",
+        "Ad-hoc",
+        "Parametric"
+      ],
+      "answer": "Run-time",
+      "explanation": "Virtual dispatch selects the most-derived override at runtime."
+    },
+    {
+      "id": "c11_e1",
+      "type": "output",
+      "category": "exercise",
+      "prompt": "Predict the output:\n```cpp\n#include <iostream>\nstruct B{ virtual void f(){ std::cout<<\"B\"; } }; \nstruct D: B{ void f() override { std::cout<<\"D\"; } };\nint main(){ B* p = new D; p->f(); }\n```",
+      "options": [],
+      "answer": "D",
+      "explanation": "`p` points to a `D`, and `f` is virtual \u2192 dynamic dispatch prints D."
+    },
+    {
+      "id": "c11_c1",
+      "type": "code",
+      "category": "cumulative",
+      "prompt": "Write a class `Counter` that supports pre-increment `++c` and prints the value.",
+      "options": [],
+      "answer": "(manual check)",
+      "explanation": "Implement `Counter& operator++()` returning *this and incrementing the field."
+    },
+    {
+      "id": "c11_d1",
+      "type": "descriptive",
+      "category": "mastery",
+      "prompt": "Explain the difference between a pointer and a reference in C++.",
+      "options": [],
+      "answer": "(manual check)",
+      "explanation": "References must bind to an object at initialization and cannot be reseated; pointers can be null and reseated."
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+^C:\DEV\OOPQUIZBOT\BUILD\CMAKEFILES\5BBCE4A5B45FE0332FC27443E3EB4116\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/dev/OOPQuizBot -BC:/dev/OOPQuizBot/build --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file C:/dev/OOPQuizBot/build/oop_quiz_bot.sln
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

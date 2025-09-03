@@ -1,0 +1,3 @@
+C:/dev/OOPQuizBot/build/CMakeFiles/oop_quiz_bot.dir
+C:/dev/OOPQuizBot/build/CMakeFiles/ALL_BUILD.dir
+C:/dev/OOPQuizBot/build/CMakeFiles/ZERO_CHECK.dir

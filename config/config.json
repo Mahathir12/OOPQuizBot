@@ -1,0 +1,15 @@
+﻿{
+  "listeners": [
+    { "address": "0.0.0.0", "port": 8848 }
+  ],
+  "app": {
+    "threads_num": 4,
+    "document_root": "./public",
+    "upload_path": "./public/uploads",
+    "log_path": "./log",
+    "run_as_daemon": false
+  },
+  "session": {
+    "timeout": 3600
+  }
+}

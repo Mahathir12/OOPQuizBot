@@ -1,28 +1,26 @@
-#ifndef BOTBASE_H
-#define BOTBASE_H
-
+#pragma once
+#include <drogon/drogon.h>
 #include <string>
-#include <iostream>
+#include <filesystem>
 
-class BotBase
-{
+// Base abstract class for all modules. Demonstrates OOP concepts used across the app.
+class BotBase {
 protected:
-  std::string name;
-  static int totalBots; // defined in BotBase.cpp
-
+    std::string dataRoot_;
 public:
-  explicit BotBase(const std::string &n = "Bot") : name(n) { ++totalBots; }
-  virtual ~BotBase() = default;
+    inline static std::atomic<size_t> totalBots{0};
 
-  static int getTotalBots() { return totalBots; }
+    BotBase(const std::string& dataRoot = "data")
+        : dataRoot_(dataRoot) {
+        ++totalBots;
+        std::filesystem::create_directories(dataRoot_);
+    }
 
-  // Every module provides its name
-  virtual std::string getModuleName() const = 0;
+    virtual ~BotBase() {
+        --totalBots;
+    }
 
-  void log(const std::string &msg) const
-  {
-    std::cout << "[" << getModuleName() << "] " << msg << std::endl;
-  }
+    virtual std::string name() const = 0;
+
+    const std::string& dataRoot() const { return dataRoot_; }
 };
-
-#endif
