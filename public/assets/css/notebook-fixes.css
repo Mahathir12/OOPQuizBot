@@ -1,0 +1,22 @@
+/* Selection / resize affordances for images etc. */
+.selectable.selected { outline: 1px dashed #888; position: relative; }
+.selectable.selected::after {
+  content:""; position:absolute; width:10px; height:10px; right:-5px; bottom:-5px;
+  border:1px solid #888; background:#fff; cursor: se-resize;
+}
+/* Tables */
+.nb-table { border-collapse: collapse; width: auto; }
+.nb-table td { border: 1px solid #aaa; min-width: 60px; padding: 4px; }
+/* Canvas */
+#nbCanvas { touch-action: none; -ms-touch-action: none; }
+/* Insert panel */
+details.insert-panel { margin: 8px 0; }
+details.insert-panel > summary { cursor: pointer; font-weight: 600; }
+/* Print: use our canvas snapshots */
+@media print {
+  header, .toolbar, .site-footer { display:none !important; }
+  .page { break-after: page; transform:none !important; box-shadow:none; }
+  canvas { display:none !important; }
+  .canvas-snapshot { display:block !important; }
+  body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
