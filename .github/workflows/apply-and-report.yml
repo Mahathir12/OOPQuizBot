@@ -1,0 +1,389 @@
+name: Apply fixes + generate OOP report
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # 1) Create folders we’ll use
+      - name: Prepare folders
+        run: |
+          mkdir -p public/assets/js public/assets/css public/data
+          mkdir -p .github/ISSUE_TEMPLATE
+          mkdir -p include include/models include/util include/examples include/io
+          mkdir -p src src/io src/util
+          mkdir -p docs
+
+      # 2) Drop in small JS/CSS fixes (kebab menu + notebook)
+      - name: Add nav and notebook assets
+        shell: bash
+        run: |
+          # three-dot kebab JS
+          cat > public/assets/js/nav-fix.js <<'JS'
+          (function(){
+            function qs(s,r=document){return r.querySelector(s)}
+            let btn=document.getElementById('moreBtn'),menu=document.getElementById('moreMenu');
+            if(!btn){btn=document.createElement('button');btn.id='moreBtn';btn.className='kebab';
+              btn.setAttribute('aria-haspopup','menu');btn.setAttribute('aria-expanded','false');
+              btn.title='More';btn.textContent='⋯';(qs('header')||document.body).appendChild(btn);}
+            if(!menu){menu=document.createElement('nav');menu.id='moreMenu';menu.className='kebab-menu';
+              menu.setAttribute('role','menu');menu.hidden=true;
+              menu.innerHTML='<a role="menuitem" href="leaderboard.html">Leaderboard</a><a role="menuitem" href="account.html">Account</a>';
+              btn.insertAdjacentElement('afterend',menu);}
+            const open=()=>{menu.hidden=false;btn.setAttribute('aria-expanded','true');};
+            const close=()=>{menu.hidden=true; btn.setAttribute('aria-expanded','false');};
+            btn.addEventListener('pointerup',(e)=>{e.preventDefault();e.stopPropagation();menu.hidden?open():close();});
+            document.addEventListener('pointerdown',(e)=>{if(!menu.hidden && !menu.contains(e.target) && !btn.contains(e.target)) close();},{capture:true});
+            btn.addEventListener('keydown',(e)=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();menu.hidden?open():close();} if(e.key==='Escape') close();});
+          })();
+          JS
+
+          # kebab CSS
+          cat > public/assets/css/kebab.css <<'CSS'
+          #moreBtn{position:relative;touch-action:manipulation;user-select:none;z-index:1001;cursor:pointer;border:0;background:transparent;font-size:20px;line-height:1}
+          #moreBtn::after{content:"";position:absolute;inset:-10px}
+          .kebab-menu[hidden]{display:none}
+          .kebab-menu{position:absolute;right:1rem;top:calc(100% + 8px);min-width:180px;background:#111;color:#eee;border:1px solid #333;border-radius:8px;padding:6px;z-index:1000;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+          .kebab-menu a{display:block;padding:8px 10px;color:inherit;text-decoration:none;border-radius:6px}
+          .kebab-menu a:hover{background:rgba(255,255,255,.06)}
+          CSS
+
+          # notebook CSS
+          cat > public/assets/css/nb-enhance.css <<'CSS'
+          .selectable.selected{outline:1px dashed #888;position:relative}.selectable.selected::after{content:"";position:absolute;width:10px;height:10px;right:-5px;bottom:-5px;border:1px solid #888;background:#fff;cursor:se-resize}
+          .nb-table{border-collapse:collapse;width:auto}.nb-table td{border:1px solid #aaa;min-width:60px;padding:4px}
+          #nbCanvas{touch-action:none;-ms-touch-action:none}
+          details.insert-panel{margin:8px 0}details.insert-panel>summary{cursor:pointer;font-weight:600}
+          @media print{header,.toolbar,.site-footer{display:none!important}.page{break-after:page;transform:none!important;box-shadow:none}canvas{display:none!important}.canvas-snapshot{display:block!important}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+          CSS
+
+          # notebook JS
+          cat > public/assets/js/nb-enhance.js <<'JS'
+          (()=>{
+            const c=document.getElementById('nbCanvas');const x=c?c.getContext('2d',{willReadFrequently:true}):null;
+            let d=false,l=null,col='#000';
+            function base(){const el=document.getElementById('penSize');return el?parseFloat(el.value||'2'):2}
+            function w(p){return base()*(p?(0.5+p):1)}
+            function dot(p){if(!x)return;x.beginPath();x.arc(p.x,p.y,w(p.p)/2,0,Math.PI*2);x.fillStyle=col;x.fill()}
+            function line(a,b){if(!x)return;x.lineCap='round';x.lineJoin='round';x.strokeStyle=col;x.lineWidth=w((a.p+b.p)/2);x.beginPath();x.moveTo(a.x,a.y);x.lineTo(b.x,b.y);x.stroke()}
+            if(c&&x){c.addEventListener('pointerdown',e=>{c.setPointerCapture(e.pointerId);d=true;l={x:e.offsetX,y:e.offsetY,p:e.pressure||0.5};dot(l)});
+              c.addEventListener('pointermove',e=>{if(!d)return;const cur={x:e.offsetX,y:e.offsetY,p:e.pressure||0.5};line(l,cur);l=cur});
+              c.addEventListener('pointerup',e=>{if(!d)return;d=false;try{c.releasePointerCapture(e.pointerId)}catch{}})}
+            function caret(n){const s=window.getSelection();if(!s||!s.rangeCount){document.body.appendChild(n);return}const r=s.getRangeAt(0);r.collapse(false);r.insertNode(n);r.setStartAfter(n);r.collapse(true);s.removeAllRanges();s.addRange(r)}
+            if(!document.querySelector('details.insert-panel')){
+              const d=document.createElement('details');d.className='insert-panel';d.innerHTML=`<summary>Insert ▾</summary>
+                <button id="insertImageBtn" type="button">Image</button><input id="insertImageInput" type="file" accept="image/*" hidden>
+                <button id="insertTableBtn" type="button">Table 2×2</button><button id="toggleBulletsBtn" type="button">Bullets</button>
+                <select id="symbolPicker"><option value="">Insert symbol…</option><option>∞</option><option>≈</option><option>±</option><option>→</option><option>←</option><option>↔</option><option>∑</option><option>∫</option><option>√</option><option>α</option><option>β</option><option>γ</option></select>
+                <button id="handToolBtn" type="button">Select/Move</button>`;
+              (document.getElementById('nbToolbar')||document.body).insertAdjacentElement('afterbegin',d);
+              const imgBtn=d.querySelector('#insertImageBtn'),imgInp=d.querySelector('#insertImageInput');
+              imgBtn.addEventListener('click',()=>imgInp.click());
+              imgInp.addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const img=document.createElement('img');
+                img.src=URL.createObjectURL(f);img.onload=()=>URL.revokeObjectURL(img.src);img.className='nb-image selectable resizable';caret(img)});
+              d.querySelector('#insertTableBtn').addEventListener('click',()=>{const t=document.createElement('table');t.className='nb-table';
+                for(let r=0;r<2;r++){const tr=document.createElement('tr');for(let c=0;c<2;c++){const td=document.createElement('td');td.innerHTML='<br>';tr.appendChild(td)}t.appendChild(tr)}caret(t)});
+              d.querySelector('#toggleBulletsBtn').addEventListener('click',()=>document.execCommand('insertUnorderedList'));
+              d.querySelector('#symbolPicker').addEventListener('change',e=>{const v=e.target.value;if(!v)return;caret(document.createTextNode(v));e.target.selectedIndex=0});
+            }
+            let mode='draw',active=null; document.addEventListener('pointerdown',e=>{
+              if(mode!=='select')return;const t=e.target.closest('.selectable');document.querySelectorAll('.selectable.selected').forEach(n=>n.classList.remove('selected'));
+              active=t||null;if(active){active.classList.add('selected');const r=active.getBoundingClientRect();const sx=e.clientX,sy=e.clientY;
+                const isR=e.clientX>r.right-16&&e.clientY>r.bottom-16;function mv(ev){const dx=ev.clientX-sx,dy=ev.clientY-sy;
+                  if(isR){active.style.width=(r.width+dx)+'px';active.style.height=(r.height+dy)+'px'}else{active.style.left=(r.left+dx)+'px';active.style.top=(r.top+dy)+'px';active.style.position='absolute'}}
+                function up(){window.removeEventListener('pointermove',mv);window.removeEventListener('pointerup',up)}
+                window.addEventListener('pointermove',mv);window.addEventListener('pointerup',up)}});
+            const hand=document.getElementById('handToolBtn'); if(hand) hand.addEventListener('click',()=>mode='select');
+            window.addEventListener('beforeprint',()=>{document.querySelectorAll('.page canvas').forEach(k=>{if(k.dataset.snap)return;
+              const i=new Image();i.src=k.toDataURL('image/png');i.className='canvas-snapshot';i.style.width=k.style.width;i.style.height=k.style.height;
+              k.insertAdjacentElement('afterend',i);k.dataset.snap='1'})});
+          })();
+          JS
+
+      # 3) Inject the assets into your existing pages if present
+      - name: Wire pages to new assets (safe idempotent inserts)
+        shell: bash
+        run: |
+          add_head(){ f="$1"; tag="$2"; if [ -f "$f" ] && ! grep -Fq "$tag" "$f"; then sed -i "s#</head>#$tag\n</head>#g" "$f"; fi }
+          add_body(){ f="$1"; tag="$2"; if [ -f "$f" ] && ! grep -Fq "$tag" "$f"; then sed -i "s#</body>#$tag\n</body>#g" "$f"; fi }
+          add_head public/index.html '<link rel="stylesheet" href="assets/css/kebab.css">'
+          add_body public/index.html '<script src="assets/js/nav-fix.js"></script>'
+          for p in announcements.html leaderboard.html account.html; do
+            add_head "public/$p" '<link rel="stylesheet" href="assets/css/kebab.css">'
+            add_body "public/$p" '<script src="assets/js/nav-fix.js"></script>'
+          done
+          add_head public/notebook.html '<link rel="stylesheet" href="assets/css/nb-enhance.css">'
+          add_body public/notebook.html '<script src="assets/js/nb-enhance.js"></script>'
+
+      # 4) (Optional but recommended) – GitHub Issues -> JSON data plumbing
+      - name: Add Issues->JSON workflow & templates
+        run: |
+          cat > .github/workflows/issues-to-json.yml <<'YAML'
+          name: Sync Issues to JSON
+          on: { issues: { types: [opened, edited, labeled, reopened] } }
+          permissions: { contents: write, issues: read }
+          jobs:
+            announcements:
+              if: contains(github.event.issue.labels.*.name, 'announcement')
+              runs-on: ubuntu-latest
+              steps:
+                - uses: actions/checkout@v4
+                - uses: actions/github-script@v7
+                  with:
+                    script: |
+                      const fs=require('fs'); const p='public/data/announcements.json';
+                      const arr=fs.existsSync(p)?JSON.parse(fs.readFileSync(p,'utf8')):[];
+                      const i=context.payload.issue;
+                      const it={id:i.number,title:i.title,body:i.body||'',author:i.user.login,date:i.created_at};
+                      const k=arr.findIndex(x=>x.id===it.id); if(k>=0)arr[k]=it; else arr.unshift(it);
+                      fs.mkdirSync('public/data',{recursive:true}); fs.writeFileSync(p,JSON.stringify(arr,null,2));
+                - uses: stefanzweifel/git-auto-commit-action@v5
+                  with: { commit_message: "data: announcement #${{ github.event.issue.number }}", file_pattern: public/data/announcements.json }
+            leaderboard:
+              if: contains(github.event.issue.labels.*.name, 'score')
+              runs-on: ubuntu-latest
+              steps:
+                - uses: actions/checkout@v4
+                - uses: actions/github-script@v7
+                  with:
+                    script: |
+                      const fs=require('fs'); const p='public/data/leaderboard.json';
+                      const arr=fs.existsSync(p)?JSON.parse(fs.readFileSync(p,'utf8')):[];
+                      const i=context.payload.issue; const b=i.body||'';
+                      const mu=b.match(/user:\s*(.+)/i); const mp=b.match(/points:\s*(\d+)/i);
+                      const user=mu?mu[1].trim():null; const points=mp?parseInt(mp[1],10):NaN;
+                      if(!user||isNaN(points)){core.setFailed("body needs 'user:' and 'points:'"); return;}
+                      const idx=arr.findIndex(x=>x.user.toLowerCase()===user.toLowerCase());
+                      const it={user,points,updated:i.created_at,source_issue:i.number}; if(idx>=0)arr[idx]=it; else arr.push(it);
+                      fs.mkdirSync('public/data',{recursive:true}); fs.writeFileSync(p,JSON.stringify(arr,null,2));
+                - uses: stefanzweifel/git-auto-commit-action@v5
+                  with: { commit_message: "data: leaderboard #${{ github.event.issue.number }}", file_pattern: public/data/leaderboard.json }
+            profiles:
+              if: contains(github.event.issue.labels.*.name, 'profile')
+              runs-on: ubuntu-latest
+              steps:
+                - uses: actions/checkout@v4
+                - uses: actions/github-script@v7
+                  with:
+                    script: |
+                      const fs=require('fs'); const p='public/data/profiles.json';
+                      const arr=fs.existsSync(p)?JSON.parse(fs.readFileSync(p,'utf8')):[];
+                      const i=context.payload.issue; const b=i.body||'';
+                      function fld(id){const m=b.match(new RegExp(id+':\\s*(.+)','i')); return m?m[1].trim():'';}
+                      const rec={username:fld('username'),displayName:fld('displayName'),email:fld('email'),role:fld('role')||'Student',avatar:fld('avatar')||''};
+                      if(!rec.username){core.setFailed('username required'); return;}
+                      const idx=arr.findIndex(x=>x.username.toLowerCase()===rec.username.toLowerCase());
+                      if(idx>=0)arr[idx]=rec; else arr.push(rec);
+                      fs.mkdirSync('public/data',{recursive:true}); fs.writeFileSync(p,JSON.stringify(arr,null,2));
+                - uses: stefanzweifel/git-auto-commit-action@v5
+                  with: { commit_message: "data: profile #${{ github.event.issue.number }}", file_pattern: public/data/profiles.json }
+          YAML
+          cat > .github/ISSUE_TEMPLATE/announcement.yml <<'Y'
+          name: Announcement
+          description: Publish a site announcement
+          labels: [announcement]
+          body:
+            - type: input   ; id: title ; attributes: { label: Title } ; validations: { required: true }
+            - type: textarea; id: body  ; attributes: { label: Message, description: "Markdown supported" } ; validations: { required: true }
+          Y
+          cat > .github/ISSUE_TEMPLATE/score.yml <<'Y'
+          name: Submit Score
+          description: Add or update a leaderboard score
+          labels: [score]
+          body:
+            - type: input ; id: user   ; attributes: { label: Username (public) } ; validations: { required: true }
+            - type: input ; id: points ; attributes: { label: Points (number) }   ; validations: { required: true }
+          Y
+          cat > .github/ISSUE_TEMPLATE/profile.yml <<'Y'
+          name: Profile
+          description: Create or update a public profile
+          labels: [profile]
+          body:
+            - type: input   ; id: username    ; attributes: { label: Username (public) } ; validations: { required: true }
+            - type: input   ; id: displayName ; attributes: { label: Display Name }     ; validations: { required: true }
+            - type: input   ; id: email       ; attributes: { label: Email (optional) }
+            - type: dropdown; id: role        ; attributes: { label: Role, options: [Student, Teacher, Admin] } ; validations: { required: true }
+            - type: input   ; id: avatar      ; attributes: { label: Avatar URL (optional), placeholder: https://... }
+          Y
+          printf "[]\n" > public/data/announcements.json
+          printf "[]\n" > public/data/leaderboard.json
+          printf "[]\n" > public/data/profiles.json
+
+      # 5) Scan your C++ for the 11 topics and build a 4–5 page PDF
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+
+      - name: Install reportlab
+        run: pip install reportlab
+
+      - name: Generate OOP compliance report (MD + PDF) from YOUR code
+        shell: python
+        run: |
+          import os, re, io, textwrap
+          from pathlib import Path
+          from reportlab.lib.pagesizes import A4
+          from reportlab.pdfgen import canvas
+          from reportlab.lib.units import cm
+
+          ROOT = Path(".")
+          SRC_DIRS = [ROOT/'include', ROOT/'src']
+          exts = ('.h','.hpp','.hh','.cpp','.cc')
+          files = [p for d in SRC_DIRS if d.exists() for p in d.rglob("*") if p.suffix in exts]
+
+          # Read files and keep line-indexed content
+          code = {}
+          for p in files:
+            try:
+              s = p.read_text(encoding='utf-8', errors='ignore').splitlines()
+              code[p] = s
+            except Exception:
+              pass
+
+          findings = {k: [] for k in range(1,12)}  # 1..11 topics
+
+          # helpers
+          def add(topic, p, line_no, snippet):
+            findings[topic].append((p.as_posix(), line_no, snippet))
+
+          class_re = re.compile(r'\\bclass\\s+(\\w+)(?:\\s*:\\s*([^\\{]+))?\\s*\\{')
+          pure_virtual_re = re.compile(r'\\bvirtual\\b[^;=]+=\\s*0\\s*;')
+          virtual_re = re.compile(r'\\bvirtual\\b')
+          friend_re = re.compile(r'\\bfriend\\b')
+          static_re = re.compile(r'\\bstatic\\b')
+          oper_re = re.compile(r'\\boperator\\s*[^\\s(]+\\s*\\(')
+          try_re = re.compile(r'\\btry\\b')
+          catch_re = re.compile(r'\\bcatch\\s*\\(')
+          fstream_re = re.compile(r'#\\s*include\\s*<fstream>|\\b(ifstream|ofstream|fstream)\\b')
+          # naive constructor/destructor detection inside classes done later
+
+          # Pass 1: scan every line
+          for p, lines in code.items():
+            access_map = {}  # line->access
+            cur_class = None
+            cur_access = None
+            class_spans = []  # (name, start_line, end_line) approximate
+
+            # collect simple class boundaries + access sections
+            for i, line in enumerate(lines, start=1):
+              m = class_re.search(line)
+              if m:
+                cur_class = m.group(1)
+                base = (m.group(2) or "").strip()
+                # Topic 2: inheritance
+                if base:
+                  add(2, p, i, line.strip())
+                  # Topic 5: virtual inheritance hint
+                  if 'virtual' in base:
+                    add(5, p, i, line.strip())
+                class_spans.append([cur_class, i, None])
+              if ':' in line:
+                if line.strip().startswith('public:'): cur_access='public'
+                elif line.strip().startswith('private:'): cur_access='private'
+                elif line.strip().startswith('protected:'): cur_access='protected'
+              # Topic 10: friend
+              if friend_re.search(line): add(10, p, i, line.strip())
+              # Topic 9: static (inside class or global)
+              if static_re.search(line): add(9, p, i, line.strip())
+              # Topic 3: operator overloads
+              if oper_re.search(line): add(3, p, i, line.strip())
+              # Topic 6: try/catch
+              if try_re.search(line): add(6, p, i, line.strip())
+              if catch_re.search(line): add(6, p, i, line.strip())
+              # Topic 7: file handling
+              if fstream_re.search(line): add(7, p, i, line.strip())
+              # Topic 3: virtual (runtime poly)
+              if pure_virtual_re.search(line):
+                add(4, p, i, line.strip())  # abstraction
+                add(3, p, i, line.strip())  # runtime poly via virtual
+              elif virtual_re.search(line):
+                add(3, p, i, line.strip())
+
+            # constructor/destructor within each class (approx)
+            for cls, start, end in class_spans:
+              # find end by next class or file end
+              # for simplicity, we won't compute exact end; scan the full file for ctor/dtor tokens
+              ctor = re.compile(rf'\\b{cls}\\s*\\(')
+              dtor = re.compile(rf'\\~{cls}\\s*\\(')
+              for i, line in enumerate(lines, start=1):
+                if ctor.search(line):
+                  add(8, p, i, line.strip())
+                if dtor.search(line):
+                  add(8, p, i, line.strip())
+
+            # Topic 1: encapsulation – class with private/protected and public methods
+            # simple heuristic: class block containing both 'private:' and 'public:'
+            txt = '\\n'.join(lines)
+            for m in re.finditer(r'class\\s+\\w+[\\s\\S]*?\\};', txt, flags=re.M):
+              block = m.group(0).splitlines()
+              has_priv = any(s.strip().startswith('private:') for s in block)
+              has_pub  = any(s.strip().startswith('public:') for s in block)
+              if has_priv and has_pub:
+                # record the first line index in file
+                start_line = txt[:m.start()].count('\\n') + 1
+                add(1, p, start_line, block[0].strip())
+
+          # Compile Markdown report
+          TOPIC_TITLE = {
+            1:'Encapsulation',2:'Inheritance',3:'Polymorphism',4:'Abstraction',
+            5:'Diamond Problem (virtual inheritance)',6:'Error Handling',7:'File Handling',
+            8:'Constructors & Destructors',9:'Static Members',10:'Friend Function/Class',11:'Generic (Templates)'
+          }
+          md = io.StringIO()
+          md.write("# OOPQuizBot — C++ OOP Compliance Report (auto‑generated)\\n\\n")
+          md.write("This report was generated from the repository code at build time. It lists *where & how* each topic appears, with exact file paths and line numbers.\\n\\n")
+          for t in range(1,12):
+            md.write(f"## {t}. {TOPIC_TITLE.get(t)}\\n")
+            if findings[t]:
+              # group by file
+              byfile = {}
+              for path, ln, snip in findings[t]:
+                byfile.setdefault(path, []).append((ln, snip))
+              for path, arr in byfile.items():
+                arr.sort(key=lambda x:x[0])
+                md.write(f"**{path}**\\n\\n")
+                for ln, snip in arr[:40]:
+                  md.write(f"  - Line {ln}: `{snip}`\\n")
+            else:
+              md.write("_No occurrences detected in current code base._\\n")
+            md.write("\\n")
+          Path('docs/oop-compliance.md').write_text(md.getvalue(), encoding='utf-8')
+
+          # Minimal 4–5 page PDF render (A4)
+          c = canvas.Canvas("docs/oop-compliance.pdf", pagesize=A4)
+          W,H = A4
+          def add_page(title, lines):
+            c.setFont("Helvetica-Bold", 16); c.drawString(2*cm, H-2*cm, title)
+            c.setFont("Helvetica", 10); y = H-3*cm
+            for L in lines:
+              for chunk in textwrap.wrap(L, width=110):
+                c.drawString(2*cm, y, chunk); y -= 12
+                if y < 2*cm:
+                  c.showPage(); c.setFont("Helvetica", 10); y = H-2*cm
+            c.showPage()
+          # Break the markdown into chunky pages by headings
+          content = md.getvalue().splitlines()
+          page = []; title = "OOPQuizBot — OOP Topics (Auto Report)"
+          for line in content:
+            if line.startswith("## "):
+              if page:
+                add_page(title, page); page=[]
+              title = line[3:]
+            else:
+              page.append(line)
+          if page: add_page(title, page)
+          # write a short front page
+          c.save()
+
+      - name: Commit all changes
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "fix(ui): 3-dot menu + notebook; chore: issues→JSON; docs: OOP compliance MD+PDF" || echo "nothing to commit"
+          git push
