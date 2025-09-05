@@ -1,0 +1,435 @@
+name: Apply OOPQuizBot Kit (menu + GH data + notebook + OOP docs)
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create folders
+        run: |
+          mkdir -p public/assets/js public/assets/css public/data
+          mkdir -p .github/ISSUE_TEMPLATE
+          mkdir -p include/models include/util include/examples include/io
+          mkdir -p src/io src/util
+          mkdir -p docs
+
+      - name: Add JS/CSS assets (minified)
+        shell: bash
+        run: |
+          cat > public/assets/js/nav-fix.js <<'JS'
+          (function(){function q(s){return document.querySelector(s)}var b=document.getElementById('moreBtn'),m=document.getElementById('moreMenu');if(!b){b=document.createElement('button');b.id='moreBtn';b.className='kebab';b.setAttribute('aria-haspopup','menu');b.setAttribute('aria-expanded','false');b.title='More';b.textContent='⋯';(q('header')||document.body).appendChild(b)}if(!m){m=document.createElement('nav');m.id='moreMenu';m.className='kebab-menu';m.setAttribute('role','menu');m.hidden=true;m.innerHTML='<a role="menuitem" href="leaderboard.html">Leaderboard</a><a role="menuitem" href="account.html">Account</a>';b.insertAdjacentElement('afterend',m)}const open=()=>{m.hidden=false;b.setAttribute('aria-expanded','true')},close=()=>{m.hidden=true;b.setAttribute('aria-expanded','false')};b.addEventListener('pointerup',e=>{e.preventDefault();e.stopPropagation();m.hidden?open():close()});document.addEventListener('pointerdown',e=>{if(!m.hidden&&!m.contains(e.target)&&!b.contains(e.target))close()},{capture:true});b.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();m.hidden?open():close()}if(e.key==='Escape')close()});})();
+          JS
+
+          cat > public/assets/css/kebab.css <<'CSS'
+          #moreBtn{position:relative;touch-action:manipulation;user-select:none;z-index:1001;cursor:pointer;border:0;background:transparent;font-size:20px;line-height:1}
+          #moreBtn::after{content:"";position:absolute;inset:-10px}
+          .kebab-menu[hidden]{display:none}
+          .kebab-menu{position:absolute;right:1rem;top:calc(100% + 8px);min-width:180px;background:#111;color:#eee;border:1px solid #333;border-radius:8px;padding:6px;z-index:1000;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+          .kebab-menu a{display:block;padding:8px 10px;color:inherit;text-decoration:none;border-radius:6px}
+          .kebab-menu a:hover{background:rgba(255,255,255,.06)}
+          CSS
+
+          cat > public/assets/js/announcements.js <<'JS'
+          (async()=>{const r=await fetch('data/announcements.json',{cache:'no-store'});const l=r.ok?await r.json():[];let h=document.getElementById('annList');if(!h){h=document.createElement('section');h.id='annList';document.body.appendChild(h)}h.innerHTML=l.map(a=>`<article class="ann"><h3>${a.title}</h3><small>@${a.author} · ${new Date(a.date).toLocaleString()}</small><p>${(a.body||'').replace(/\n/g,'<br>')}</p></article>`).join('');})();
+          JS
+
+          cat > public/assets/js/leaderboard.js <<'JS'
+          (async()=>{const r=await fetch('data/leaderboard.json',{cache:'no-store'});const a=r.ok?await r.json():[];a.sort((x,y)=>y.points-x.points);let t=document.getElementById('lb');if(!t){t=document.createElement('table');t.id='lb';t.innerHTML='<thead><tr><th>#</th><th>User</th><th>Points</th></tr></thead><tbody></tbody>';document.body.appendChild(t)}const tb=t.tBodies[0]||t.createTBody();tb.innerHTML=a.map((x,i)=>`<tr><td>${i+1}</td><td>${x.user}</td><td>${x.points}</td></tr>`).join('');})();
+          JS
+
+          cat > public/assets/js/account.js <<'JS'
+          (async()=>{function uu(){try{return localStorage.getItem('oop_user')||'guest'}catch{return'guest'}}async function j(p){const r=await fetch(p,{cache:'no-store'});return r.ok?r.json():[]}const me=uu();const profiles=await j('data/profiles.json');const rec=profiles.find(p=>p.username?.toLowerCase()===me.toLowerCase());if(rec){const dn=document.querySelector('#displayName');if(dn)dn.value=rec.displayName||'';const em=document.querySelector('#email');if(em)em.value=rec.email||'';const rl=document.querySelector('#role');if(rl)rl.value=rec.role||'Student';const av=document.querySelector('#avatar');if(av&&rec.avatar)av.src=rec.avatar}const btn=document.getElementById('proposeProfileChange');if(btn){btn.addEventListener('click',()=>{const dn=encodeURIComponent(document.querySelector('#displayName')?.value||'');const em=encodeURIComponent(document.querySelector('#email')?.value||'');const rl=encodeURIComponent(document.querySelector('#role')?.value||'Student');const av=encodeURIComponent(document.querySelector('#avatarUrl')?.value||'');const title=encodeURIComponent(`Profile for ${me}`);const body=encodeURIComponent(`username: ${me}\ndisplayName: ${dn}\nemail: ${em}\nrole: ${rl}\navatar: ${av}\n`);const url=`https://github.com/Mahathir12/OOPQuizBot/issues/new?labels=profile&title=${title}&body=${body}`;window.open(url,'_blank')});}})();
+          JS
+
+          cat > public/assets/css/nb-enhance.css <<'CSS'
+          .selectable.selected{outline:1px dashed #888;position:relative}.selectable.selected::after{content:"";position:absolute;width:10px;height:10px;right:-5px;bottom:-5px;border:1px solid #888;background:#fff;cursor:se-resize}.nb-table{border-collapse:collapse;width:auto}.nb-table td{border:1px solid #aaa;min-width:60px;padding:4px}#nbCanvas{touch-action:none;-ms-touch-action:none}details.insert-panel{margin:8px 0}details.insert-panel>summary{cursor:pointer;font-weight:600}@media print{header,.toolbar,.site-footer{display:none!important}.page{break-after:page;transform:none!important;box-shadow:none}canvas{display:none!important}.canvas-snapshot{display:block!important}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+          CSS
+
+          cat > public/assets/js/nb-enhance.js <<'JS'
+          (()=>{const c=document.getElementById('nbCanvas');const x=c?c.getContext('2d',{willReadFrequently:true}):null;let d=false,l=null,col='#000';function base(){const el=document.getElementById('penSize');return el?parseFloat(el.value||'2'):2}function w(p){return base()*(p?(0.5+p):1)}function dot(p){if(!x)return;x.beginPath();x.arc(p.x,p.y,w(p.p)/2,0,Math.PI*2);x.fillStyle=col;x.fill()}function line(a,b){if(!x)return;x.lineCap='round';x.lineJoin='round';x.strokeStyle=col;x.lineWidth=w((a.p+b.p)/2);x.beginPath();x.moveTo(a.x,a.y);x.lineTo(b.x,b.y);x.stroke()}if(c&&x){c.addEventListener('pointerdown',e=>{c.setPointerCapture(e.pointerId);d=true;l={x:e.offsetX,y:e.offsetY,p:e.pressure||0.5};dot(l)});c.addEventListener('pointermove',e=>{if(!d)return;const cur={x:e.offsetX,y:e.offsetY,p:e.pressure||0.5};line(l,cur);l=cur});c.addEventListener('pointerup',e=>{if(!d)return;d=false;try{c.releasePointerCapture(e.pointerId)}catch{}})}function snap(){document.querySelectorAll('.page canvas').forEach(k=>{if(k.dataset.snap)return;const i=new Image();i.src=k.toDataURL('image/png');i.className='canvas-snapshot';i.style.width=k.style.width;i.style.height=k.style.height;k.insertAdjacentElement('afterend',i);k.dataset.snap='1'})}window.addEventListener('beforeprint',snap);function caret(n){const s=window.getSelection();if(!s||!s.rangeCount){document.body.appendChild(n);return}const r=s.getRangeAt(0);r.collapse(false);r.insertNode(n);r.setStartAfter(n);r.collapse(true);s.removeAllRanges();s.addRange(r)}(function(){if(document.querySelector('details.insert-panel'))return;const d=document.createElement('details');d.className='insert-panel';d.innerHTML=`<summary>Insert ▾</summary><button id="insertImageBtn" type="button">Image</button><input id="insertImageInput" type="file" accept="image/*" hidden><button id="insertTableBtn" type="button">Table 2×2</button><button id="toggleBulletsBtn" type="button">Bullets</button><select id="symbolPicker"><option value="">Insert symbol…</option><option>∞</option><option>≈</option><option>±</option><option>→</option><option>←</option><option>↔</option><option>∑</option><option>∫</option><option>√</option><option>α</option><option>β</option><option>γ</option></select><button id="handToolBtn" type="button">Select/Move</button>`;const host=document.getElementById('nbToolbar')||document.body;host.insertAdjacentElement('afterbegin',d);const imgBtn=d.querySelector('#insertImageBtn');const imgInp=d.querySelector('#insertImageInput');imgBtn.addEventListener('click',()=>imgInp.click());imgInp.addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const img=document.createElement('img');img.src=URL.createObjectURL(f);img.onload=()=>URL.revokeObjectURL(img.src);img.className='nb-image selectable resizable';caret(img)});d.querySelector('#insertTableBtn').addEventListener('click',()=>{const t=document.createElement('table');t.className='nb-table';for(let r=0;r<2;r++){const tr=document.createElement('tr');for(let c=0;c<2;c++){const td=document.createElement('td');td.innerHTML='<br>';tr.appendChild(td)}t.appendChild(tr)}caret(t)});d.querySelector('#toggleBulletsBtn').addEventListener('click',()=>document.execCommand('insertUnorderedList'));d.querySelector('#symbolPicker').addEventListener('change',e=>{const v=e.target.value;if(!v)return;caret(document.createTextNode(v));e.target.selectedIndex=0})})();let mode='draw',active=null;document.addEventListener('pointerdown',e=>{if(mode!=='select')return;const t=e.target.closest('.selectable');document.querySelectorAll('.selectable.selected').forEach(n=>n.classList.remove('selected'));active=t||null;if(active){active.classList.add('selected');const r=active.getBoundingClientRect();const sx=e.clientX,sy=e.clientY;const isR=e.clientX>r.right-16&&e.clientY>r.bottom-16;function mv(ev){const dx=ev.clientX-sx,dy=ev.clientY-sy;if(isR){active.style.width=(r.width+dx)+'px';active.style.height=(r.height+dy)+'px'}else{active.style.left=(r.left+dx)+'px';active.style.top=(r.top+dy)+'px';active.style.position='absolute'}}function up(){window.removeEventListener('pointermove',mv);window.removeEventListener('pointerup',up)}window.addEventListener('pointermove',mv);window.addEventListener('pointerup',up)}})})();
+          JS
+
+      - name: Insert tags into pages if present
+        shell: bash
+        run: |
+          add_head_link(){ f="$1"; l="$2"; if [ -f "$f" ] && ! grep -Fq "$l" "$f"; then sed -i "s#</head>#  $l\n</head>#g" "$f"; fi }
+          add_body_script(){ f="$1"; s="$2"; if [ -f "$f" ] && ! grep -Fq "$s" "$f"; then sed -i "s#</body>#  $s\n</body>#g" "$f"; fi }
+
+          # Home/index
+          add_head_link public/index.html '<link rel="stylesheet" href="assets/css/kebab.css">'
+          add_body_script public/index.html '<script src="assets/js/nav-fix.js"></script>'
+
+          # Announcements
+          add_head_link public/announcements.html '<link rel="stylesheet" href="assets/css/kebab.css">'
+          add_body_script public/announcements.html '<script src="assets/js/nav-fix.js"></script>'
+          add_body_script public/announcements.html '<script src="assets/js/announcements.js"></script>'
+
+          # Leaderboard
+          add_head_link public/leaderboard.html '<link rel="stylesheet" href="assets/css/kebab.css">'
+          add_body_script public/leaderboard.html '<script src="assets/js/nav-fix.js"></script>'
+          add_body_script public/leaderboard.html '<script src="assets/js/leaderboard.js"></script>'
+
+          # Account
+          add_head_link public/account.html '<link rel="stylesheet" href="assets/css/kebab.css">'
+          add_body_script public/account.html '<script src="assets/js/nav-fix.js"></script>'
+          add_body_script public/account.html '<script src="assets/js/account.js"></script>'
+
+          # Notebook (load CSS+JS; our JS self-adds the Insert panel and handles print)
+          add_head_link public/notebook.html '<link rel="stylesheet" href="assets/css/nb-enhance.css">'
+          add_body_script public/notebook.html '<script src="assets/js/nb-enhance.js"></script>'
+
+      - name: GitHub Issues → JSON workflow + templates + data files
+        run: |
+          cat > .github/workflows/issues-to-data.yml <<'YAML'
+          name: Sync Issues to JSON
+          on:
+            issues:
+              types: [opened, edited, labeled, reopened]
+          permissions:
+            contents: write
+            issues: read
+          jobs:
+            announcements:
+              if: contains(github.event.issue.labels.*.name, 'announcement')
+              runs-on: ubuntu-latest
+              steps:
+                - uses: actions/checkout@v4
+                - uses: actions/github-script@v7
+                  with:
+                    script: |
+                      const fs = require('fs');
+                      const path = 'public/data/announcements.json';
+                      const arr = fs.existsSync(path) ? JSON.parse(fs.readFileSync(path,'utf8')) : [];
+                      const i = context.payload.issue;
+                      const item = { id:i.number, title:i.title, body:i.body||'', author:i.user.login, date:i.created_at };
+                      const k = arr.findIndex(x=>x.id===item.id);
+                      if (k>=0) arr[k]=item; else arr.unshift(item);
+                      fs.mkdirSync('public/data',{recursive:true});
+                      fs.writeFileSync(path, JSON.stringify(arr,null,2));
+                - uses: stefanzweifel/git-auto-commit-action@v5
+                  with:
+                    commit_message: "chore(data): sync announcement #${{ github.event.issue.number }}"
+                    file_pattern: public/data/announcements.json
+
+            leaderboard:
+              if: contains(github.event.issue.labels.*.name, 'score')
+              runs-on: ubuntu-latest
+              steps:
+                - uses: actions/checkout@v4
+                - uses: actions/github-script@v7
+                  with:
+                    script: |
+                      const fs = require('fs');
+                      const path = 'public/data/leaderboard.json';
+                      const arr = fs.existsSync(path) ? JSON.parse(fs.readFileSync(path,'utf8')) : [];
+                      const i = context.payload.issue;
+                      const b = i.body || '';
+                      const mu = b.match(/user:\s*(.+)/i);
+                      const mp = b.match(/points:\s*(\d+)/i);
+                      const user = mu ? mu[1].trim() : null;
+                      const points = mp ? parseInt(mp[1],10) : NaN;
+                      if (!user || isNaN(points)) { core.setFailed("Body must contain 'user:' and 'points:'"); return; }
+                      const idx = arr.findIndex(x=>x.user.toLowerCase()===user.toLowerCase());
+                      const item = { user, points, updated: i.created_at, source_issue: i.number };
+                      if (idx>=0) arr[idx]=item; else arr.push(item);
+                      fs.mkdirSync('public/data',{recursive:true});
+                      fs.writeFileSync(path, JSON.stringify(arr,null,2));
+                - uses: stefanzweifel/git-auto-commit-action@v5
+                  with:
+                    commit_message: "chore(data): sync leaderboard from issue #${{ github.event.issue.number }}"
+                    file_pattern: public/data/leaderboard.json
+
+            profiles:
+              if: contains(github.event.issue.labels.*.name, 'profile')
+              runs-on: ubuntu-latest
+              steps:
+                - uses: actions/checkout@v4
+                - uses: actions/github-script@v7
+                  with:
+                    script: |
+                      const fs = require('fs');
+                      const path = 'public/data/profiles.json';
+                      const arr = fs.existsSync(path) ? JSON.parse(fs.readFileSync(path,'utf8')) : [];
+                      const i = context.payload.issue;
+                      const b = i.body || '';
+                      function fld(id){ const m=b.match(new RegExp(id+':\\s*(.+)','i')); return m?m[1].trim():''; }
+                      const rec = { username: fld('username'), displayName: fld('displayName'), email: fld('email'), role: fld('role')||'Student', avatar: fld('avatar')||'' };
+                      if (!rec.username) { core.setFailed('username is required'); return; }
+                      const idx = arr.findIndex(x=>x.username.toLowerCase()===rec.username.toLowerCase());
+                      if (idx>=0) arr[idx]=rec; else arr.push(rec);
+                      fs.mkdirSync('public/data',{recursive:true});
+                      fs.writeFileSync(path, JSON.stringify(arr,null,2));
+                - uses: stefanzweifel/git-auto-commit-action@v5
+                  with:
+                    commit_message: "chore(data): sync profile from issue #${{ github.event.issue.number }}"
+                    file_pattern: public/data/profiles.json
+          YAML
+
+          cat > .github/ISSUE_TEMPLATE/announcement.yml <<'YML'
+          name: Announcement
+          description: Publish a site announcement
+          labels: [announcement]
+          body:
+            - type: input
+              id: title
+              attributes: { label: Title }
+              validations: { required: true }
+            - type: textarea
+              id: body
+              attributes: { label: Message, description: "Markdown supported" }
+              validations: { required: true }
+          YML
+
+          cat > .github/ISSUE_TEMPLATE/score.yml <<'YML'
+          name: Submit Score
+          description: Add or update a leaderboard score
+          labels: [score]
+          body:
+            - type: input
+              id: user
+              attributes: { label: Username (public), placeholder: e.g., mahathir }
+              validations: { required: true }
+            - type: input
+              id: points
+              attributes: { label: Points (number), placeholder: e.g., 420 }
+              validations: { required: true }
+          YML
+
+          cat > .github/ISSUE_TEMPLATE/profile.yml <<'YML'
+          name: Profile
+          description: Create or update a public profile (Account page)
+          labels: [profile]
+          body:
+            - type: input
+              id: username
+              attributes: { label: Username (public), placeholder: e.g., mahathir }
+              validations: { required: true }
+            - type: input
+              id: displayName
+              attributes: { label: Display Name }
+              validations: { required: true }
+            - type: input
+              id: email
+              attributes: { label: Email (optional) }
+            - type: dropdown
+              id: role
+              attributes: { label: Role, options: [Student, Teacher, Admin] }
+              validations: { required: true }
+            - type: input
+              id: avatar
+              attributes: { label: Avatar URL (optional), placeholder: https://... }
+          YML
+
+          printf "[]\n" > public/data/announcements.json
+          printf "[]\n" > public/data/leaderboard.json
+          printf "[]\n" > public/data/profiles.json
+
+      - name: Add C++ examples for the 11 OOP topics + doc
+        run: |
+          cat > include/models/User.h <<'CPP'
+          #pragma once
+          #include <string>
+          class User {
+            std::string username_;
+            int points_{0};
+          public:
+            User() = default;
+            explicit User(std::string u): username_(std::move(u)) {}
+            const std::string& name() const { return username_; }
+            int points() const { return points_; }
+            void addPoints(int p){ if(p>0) points_ += p; }
+          };
+          CPP
+
+          cat > include/models/Question.h <<'CPP'
+          #pragma once
+          #include <string>
+          struct Question {
+            virtual ~Question() = default;
+            virtual std::string prompt() const = 0;
+            virtual bool check(const std::string& a) const = 0;
+          };
+          struct McqQuestion : Question {
+            std::string q, correct;
+            McqQuestion(std::string q_, std::string c): q(std::move(q_)), correct(std::move(c)) {}
+            std::string prompt() const override { return q; }
+            bool check(const std::string& a) const override { return a == correct; }
+          };
+          CPP
+
+          cat > include/models/Score.h <<'CPP'
+          #pragma once
+          struct Score{
+            int value{0};
+            void add(int p){ value += p; }
+            void add(const Score& s){ value += s.value; }
+            Score operator+(int p) const { return Score{value + p}; }
+          };
+          CPP
+
+          cat > include/models/NotePage.h <<'CPP'
+          #pragma once
+          #include <string>
+          #include <vector>
+          struct NotePage{
+            std::string title;
+            std::vector<std::string> lines;
+            NotePage() = default;
+            explicit NotePage(std::string t): title(std::move(t)) {}
+            NotePage(const NotePage&) = default;
+            ~NotePage() = default;
+          };
+          CPP
+
+          cat > include/util/IdGen.h <<'CPP'
+          #pragma once
+          struct IdGen{
+            static int next;
+            static int take(){ return ++next; }
+          };
+          CPP
+          cat > src/util/IdGen.cpp <<'CPP'
+          #include "util/IdGen.h"
+          int IdGen::next = 0;
+          CPP
+
+          cat > include/models/SecretBox.h <<'CPP'
+          #pragma once
+          #include <string>
+          class Inspector;
+          class SecretBox{
+            std::string secret_ = "top-secret";
+            friend class Inspector;
+          };
+          class Inspector{
+          public:
+            std::string peek(const SecretBox& b) const { return b.secret_; }
+          };
+          CPP
+
+          cat > include/util/Box.h <<'CPP'
+          #pragma once
+          #include <utility>
+          template<typename T>
+          class Box{
+            T value;
+          public:
+            explicit Box(T v): value(std::move(v)) {}
+            const T& get() const { return value; }
+          };
+          CPP
+
+          cat > include/util/clamp.h <<'CPP'
+          #pragma once
+          template<typename T>
+          T clamp(T v, T lo, T hi){
+            return v < lo ? lo : (v > hi ? hi : v);
+          }
+          CPP
+
+          cat > include/examples/Diamond.h <<'CPP'
+          #pragma once
+          struct A{ int a{1}; };
+          struct B : virtual A {};
+          struct C : virtual A {};
+          struct D : B, C { int sumA() const { return a; } };
+          CPP
+
+          cat > include/io/UserIO.h <<'CPP'
+          #pragma once
+          #include <string>
+          #include "models/User.h"
+          void saveUser(const User& u, const std::string& path);
+          User loadUser(const std::string& path);
+          CPP
+          cat > src/io/UserIO.cpp <<'CPP'
+          #include "io/UserIO.h"
+          #include <fstream>
+          User loadUser(const std::string& path){
+            std::ifstream in(path);
+            std::string name; int pts=0;
+            if(in){ char comma; in >> name >> comma >> pts; }
+            User u{name}; u.addPoints(pts); return u;
+          }
+          void saveUser(const User& u, const std::string& path){
+            std::ofstream out(path);
+            out << u.name() << "," << u.points() << "\n";
+          }
+          CPP
+
+          cat > docs/oop-compliance.md <<'MD'
+          # OOPQuizBot — 11 C++ OOP Topics (Where, How, and Code Lines)
+
+          This sheet shows exactly **where** each topic lives, **how** it’s used, and the **code lines** (in this repo).
+          Your C++ examples are standalone (safe to read/build) and live under `include/` and `src/`.
+
+          ---
+          ## 1) Encapsulation
+          - **Where:** `include/models/User.h`, Lines **3–11**
+          - **How:** Private data (`username_`, `points_`) + public getters/mutator guard valid state changes.
+          - **Code:** Lines 3–5 (private data), 9–11 (public API).
+
+          ## 2) Inheritance
+          - **Where:** `include/models/Question.h`, Lines **3–13**
+          - **How:** `Question` is a base interface; `McqQuestion` derives and implements `prompt()`/`check()`.
+
+          ## 3) Polymorphism (compile‑time & run‑time)
+          - **Compile‑time:** `include/models/Score.h`, Lines **4–6** (overloading and `operator+`).
+          - **Run‑time:** `include/models/Question.h`, Lines **3–13** use `virtual` and `override`.
+
+          ## 4) Abstraction
+          - **Where:** `include/models/Question.h`, Lines **3–6**
+          - **How:** Abstract class (pure virtual `=0`) defines interface, concrete types plug in.
+
+          ## 5) Diamond Problem (solved with virtual inheritance)
+          - **Where:** `include/examples/Diamond.h`, Lines **1–6**
+          - **How:** `B` and `C` virtually inherit `A`; `D` has a single `A` subobject.
+
+          ## 6) Error Handling
+          - **Where:** `src/io/QuizLoader.cpp`, Lines **7–20**
+          - **How:** Use `try/catch` with specific messages (cannot open file, invalid schema).
+
+          ## 7) File Handling *(optional but included)*
+          - **Where:** `src/io/UserIO.cpp`, Lines **1–12**
+          - **How:** `saveUser()` and `loadUser()` demonstrate basic text i/o.
+
+          ## 8) Constructors & Destructors
+          - **Where:** `include/models/NotePage.h`, Lines **7–11**
+          - **How:** default, parameterized, copy, and destructor (defaulted).
+
+          ## 9) Static Members *(optional but included)*
+          - **Where:** `include/util/IdGen.h` (Lines **2–5**), `src/util/IdGen.cpp` (Lines **1–2**)
+          - **How:** `IdGen::next` is shared across all instances; `IdGen::take()` increments.
+
+          ## 10) Friend Function / Friend Class
+          - **Where:** `include/models/SecretBox.h`, Lines **4–10**
+          - **How:** `Inspector` can access `SecretBox` internals. Use sparingly.
+
+          ## 11) Generic Class / Function (Templates)
+          - **Where:** `include/util/Box.h`, Lines **3–9**; `include/util/clamp.h`, Lines **2–5**
+          - **How:** Works for many types without duplication.
+
+          ---
+          ## Front-End reliability upgrades (quick summary)
+          - **Three‑dot menu:** Pointer Events + enlarged hit‑area → first‑tap opens.
+          - **Notebook pen:** Pointer capture + pressure → smooth pen strokes.
+          - **Print:** Snapshots canvases on `beforeprint` → no blank pages.
+          - **Insert panel:** Image/Table/Bullets/Symbols + simple Hand tool to move/resize.
+
+          ## GitHub as your “database”
+          - Submit data by opening Issues with labels **announcement**, **score**, **profile**.
+          - The **Issues → JSON** workflow writes to `public/data/*.json` which any device can read.
+          MD
+
+      - name: Commit changes
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "chore: apply menu/notebook fixes + GH data sync + OOP docs & examples"
+          git push
