@@ -24,6 +24,8 @@
   .icon-btn{appearance:none;border:0;background:transparent;color:#fff;cursor:pointer;padding:8px;border-radius:10px}
   .icon-btn:hover{background:rgba(255,255,255,.12)}
   .login-btn{appearance:none;border:0;cursor:pointer;background:#fff;color:#111;padding:8px 16px;border-radius:999px;font-weight:600;box-shadow:var(--shadow)}
+
+  /* 3-dot menu */
   #moreBtn{position:relative;touch-action:manipulation;user-select:none;z-index:1001;cursor:pointer;border:0;background:transparent;font-size:20px;line-height:1}
   #moreBtn::after{content:"";position:absolute;inset:-10px}
   .more-menu{position:absolute;right:80px;top:42px;display:none;flex-direction:column;gap:6px;background:rgba(0,0,0,.85);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:10px;min-width:180px;box-shadow:var(--shadow)}
@@ -55,11 +57,11 @@
   /* Layers: bg -> text -> drawing */
   #bgCanvas,#drawCanvas,#rt{position:absolute;left:0;right:0;top:0;bottom:0;border-radius:8px}
   #bgCanvas{z-index:0}
-  #rt{z-index:1;padding:12px;outline:none;overflow:auto;user-select:text; /* allow text selection */}
-  #drawCanvas{z-index:2;pointer-events:auto;touch-action:none} /* drawing surface only */
+  #rt{z-index:1;padding:12px;outline:none;overflow:auto;user-select:text}
+  #drawCanvas{z-index:2;pointer-events:auto;touch-action:none}
   #rt img{max-width:100%;height:auto;border-radius:6px;display:inline-block}
 
-  /* Selection/resize UI */
+  /* Select/resize visuals */
   .selectable{display:inline-block}
   .selectable.selected{outline:1px dashed #888;position:relative}
   .selectable.selected::after{content:"";position:absolute;right:-6px;bottom:-6px;width:12px;height:12px;border:1px solid #888;background:#fff;cursor:se-resize;border-radius:2px}
@@ -150,7 +152,6 @@
         <button id="clearFmt" class="btn">Clear</button>
         <label class="btn">Insert Image<input id="insertImg" type="file" accept="image/*" hidden></label>
       </div>
-
       <div class="group">
         <select id="layout" class="input">
           <option value="ruled" selected>Ruled</option>
@@ -164,20 +165,18 @@
         <label><input id="showMargin" type="checkbox" checked> Show margin</label>
         <span class="header-label">Margin</span><input id="marginColor" class="color" type="color" value="#ef4444">
       </div>
-
       <div class="group">
         <button id="newPage" class="btn">New Page</button>
         <button id="prevPage" class="btn">Prev</button>
         <button id="nextPage" class="btn">Next</button>
         <span id="pageIndicator" class="pager">Page 1 / 1</span>
       </div>
-
       <div class="group">
         <button id="save" class="btn">Save</button>
         <button id="load" class="btn">Load</button>
         <button id="export" class="btn">Export PNG</button>
         <button id="print" class="btn">Print / PDF</button>
-        <button id="clear" class="btn">Clear Drawing</button>
+        <button id="clear" class="btn">Clear Page</button>
       </div>
     </div>
 
@@ -199,19 +198,17 @@
       </div>
     </div>
 
-    <div class="note">Use <strong>Insert Image/Table</strong> and the <strong>🖐️ Select</strong> tool to move/resize items. Print/PDF excludes the header.</div>
+    <div class="note">Use <strong>Insert Image/Table</strong> and the <strong>🖐️ Select</strong> tool to move/resize items. In Select mode, the whole drawing can also be moved/resized. Print/PDF excludes the header.</div>
   </div>
 </main>
 
 <script>
-/* ===== Header/theme + robust ⋯ menu (same as Home) ===== */
+/* ===== Header/theme + unified ⋯ menu (same as Home) ===== */
 const header = document.getElementById('siteHeader');
 const onScroll = () => { if (scrollY>10) header.classList.add('scrolled'); else header.classList.remove('scrolled'); };
 onScroll(); addEventListener('scroll', onScroll, {passive:true});
-
 const root=document.documentElement; const saved=localStorage.getItem('theme'); if(saved) root.setAttribute('data-theme',saved);
 document.getElementById('themeToggle').addEventListener('click',()=>{ const isLight=root.getAttribute('data-theme')==='light'; root.setAttribute('data-theme',isLight?'dark':'light'); localStorage.setItem('theme',isLight?'dark':'light'); });
-
 (function normalizeMoreBtn(){ const old=document.getElementById('moreBtn'); const clone=old.cloneNode(true); old.parentNode.replaceChild(clone,old); })();
 const moreBtn=document.getElementById('moreBtn'), moreMenu=document.getElementById('moreMenu');
 function openMenu(){ moreMenu.classList.add('show'); moreBtn.setAttribute('aria-expanded','true'); }
@@ -256,10 +253,10 @@ document.getElementById('logoutBtn').addEventListener('click',()=>{ localStorage
   // ---- State
   let tool='text', pages=[], current=0;
   let drawing=false, lastPt=null;
-  let hand=false, active=null;
+  let hand=false, active=null, savedRange=null;
+  let drawBox=null, drawOverlay=null; // overlay used in hand mode to move/resize the whole drawing
 
-  // ---- Caret memory (so toolbar inserts go into page, not toolbar)
-  let savedRange=null;
+  // ---- Caret memory so insertions go into the page (not the toolbar)
   function saveRangeFromRT(){
     const sel=window.getSelection(); if(!sel || sel.rangeCount===0) return;
     const r=sel.getRangeAt(0);
@@ -269,26 +266,20 @@ document.getElementById('logoutBtn').addEventListener('click',()=>{ localStorage
     rt.focus();
     const sel=window.getSelection(); sel.removeAllRanges();
     if (savedRange){ sel.addRange(savedRange); }
-    else {
-      const r=document.createRange();
-      r.selectNodeContents(rt);
-      if (place==='start') r.collapse(true); else r.collapse(false);
-      sel.addRange(r);
-    }
+    else { const r=document.createRange(); r.selectNodeContents(rt); place==='start'?r.collapse(true):r.collapse(false); sel.addRange(r); }
   }
   rt.addEventListener('keyup',saveRangeFromRT);
   rt.addEventListener('mouseup',saveRangeFromRT);
   rt.addEventListener('input',saveRangeFromRT);
-  document.addEventListener('selectionchange',()=>{ // keep latest, but only if inside rt
-    saveRangeFromRT();
-  });
+  document.addEventListener('selectionchange',saveRangeFromRT);
 
-  // ---- Tools
+  // ---- Tool switching
   function setActiveTool(t){
     tool=t;
     for(const k in toolButtons) toolButtons[k].classList.toggle('active', k===t);
-    if (t==='text' || t==='hand'){ fg.style.pointerEvents='none'; rt.contentEditable = (t!=='hand'); if(t==='text') rt.focus(); }
-    else { fg.style.pointerEvents='auto'; rt.contentEditable='true'; }
+    if (t==='text'){ fg.style.pointerEvents='auto'; rt.contentEditable='true'; }
+    if (t==='hand'){ fg.style.pointerEvents='none'; rt.contentEditable='false'; }     // hand uses overlay; canvas hidden
+    if (t!=='hand' && drawBox){ commitDrawOverlay(); }                               // leaving hand? commit overlay
     if (t==='highlighter'){ opacityEl.value=0.35; sizeEl.value=Math.max(10, +sizeEl.value||10); }
     else if (t==='pencil'){ opacityEl.value=1; sizeEl.value=2; }
     else if (t==='writing'){ opacityEl.value=1; sizeEl.value=4; }
@@ -302,6 +293,57 @@ document.getElementById('logoutBtn').addEventListener('click',()=>{ localStorage
   toolButtons.highlighter.addEventListener('click',()=>setActiveTool('highlighter'));
   toolButtons.hd.addEventListener('click',()=>setActiveTool('hd'));
   toolButtons.eraser.addEventListener('click',()=>setActiveTool('eraser'));
+
+  // ===== Enter/Exit Select (hand) mode
+  btnSelectTool.addEventListener('click',()=>{
+    hand=!hand; btnSelectTool.classList.toggle('active',hand);
+    if(hand){ enterHand(); } else { exitHand(); }
+  });
+
+  function enterHand(){
+    setActiveTool('hand');
+    // create movable overlay from the drawing so it can be resized/moved
+    if(drawBox) return;
+    const container=document.getElementById('pageInner');
+    const rectCanvas=fg.getBoundingClientRect();
+    const rectContainer=container.getBoundingClientRect();
+    drawBox=document.createElement('div');
+    drawBox.id='drawBox';
+    drawBox.className='selectable selected';
+    drawBox.style.position='absolute';
+    drawBox.style.left=(rectCanvas.left-rectContainer.left)+'px';
+    drawBox.style.top =(rectCanvas.top -rectContainer.top )+'px';
+    drawBox.style.width =rectCanvas.width+'px';
+    drawBox.style.height=rectCanvas.height+'px';
+    drawOverlay=new Image();
+    drawOverlay.src=fg.toDataURL('image/png');
+    drawOverlay.style.width='100%'; drawOverlay.style.height='100%'; drawOverlay.style.display='block';
+    drawBox.appendChild(drawOverlay);
+    container.appendChild(drawBox);
+    fg.style.visibility='hidden'; // hide canvas while overlay is active
+  }
+  function commitDrawOverlay(){
+    if(!drawBox || !drawOverlay) return;
+    const container=document.getElementById('pageInner');
+    const header=document.getElementById('pageHeader');
+    const rect=fg.getBoundingClientRect();
+    const left=parseFloat(drawBox.style.left)||0;
+    const top =parseFloat(drawBox.style.top)||0;
+    const w   =parseFloat(drawBox.style.width)||rect.width;
+    const h   =parseFloat(drawBox.style.height)||rect.height;
+
+    // map overlay CSS px back to canvas coords (ctx scaled to devicePixelRatio already)
+    const x=left;
+    const y=top - header.offsetHeight;
+
+    ctx.clearRect(0,0,rect.width,rect.height);
+    const img=new Image();
+    img.onload=()=>{ ctx.drawImage(img, x, y, w, h); };
+    img.src=drawOverlay.src;
+
+    drawBox.remove(); drawBox=null; drawOverlay=null; fg.style.visibility='visible';
+  }
+  function exitHand(){ commitDrawOverlay(); setActiveTool('text'); }
 
   // ---- Canvas sizing + background
   function resizeCanvases(){
@@ -333,7 +375,7 @@ document.getElementById('logoutBtn').addEventListener('click',()=>{ localStorage
   }
   addEventListener('resize',resizeCanvases);
 
-  // ---- Drawing (mouse/touch/pen with pressure)
+  // ---- Drawing with mouse/touch/pen (pressure aware)
   function getPos(e){ const r=fg.getBoundingClientRect(); const c=e.touches?e.touches[0]:e; return {x:c.clientX-r.left,y:c.clientY-r.top,t:e.timeStamp||Date.now(),p:c.pressure||0.5}; }
   function drawSegment(from,to,w,color,a){ ctx.globalCompositeOperation='source-over'; ctx.strokeStyle=color; ctx.globalAlpha=a; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.lineWidth=w; ctx.beginPath(); ctx.moveTo(from.x,from.y); ctx.lineTo(to.x,to.y); ctx.stroke(); ctx.globalAlpha=1; }
   function stroke(from,to,e){
@@ -346,7 +388,7 @@ document.getElementById('logoutBtn').addEventListener('click',()=>{ localStorage
   fg.addEventListener('pointermove',(e)=>{ if(!drawing) return; const p=getPos(e); stroke(lastPt,p,e); lastPt=p; });
   fg.addEventListener('pointerup',()=>{ drawing=false; });
 
-  // ---- Text formatting (execCommand kept for simplicity)
+  // ---- Rich text commands
   function exec(cmd,val=null){ document.execCommand(cmd,false,val); rt.focus(); }
   fontSel.addEventListener('change',()=>exec('fontName',fontSel.value));
   fontSizeSel.addEventListener('change',()=>{
@@ -361,9 +403,9 @@ document.getElementById('logoutBtn').addEventListener('click',()=>{ localStorage
   alignRight.addEventListener('click', ()=>exec('justifyRight'));
   clearFmt.addEventListener('click', ()=>exec('removeFormat'));
 
-  // ---- Insert helpers (force insertion into RT)
+  // ---- Insert helpers
   function insertAtCaret(node){
-    focusRTAndRestore(); // ensure caret is inside RT
+    focusRTAndRestore();
     const sel=window.getSelection(); if(!sel || sel.rangeCount===0){ rt.appendChild(node); return; }
     const range=sel.getRangeAt(0);
     if(!rt.contains(range.commonAncestorContainer)){ rt.appendChild(node); return; }
@@ -388,52 +430,55 @@ document.getElementById('logoutBtn').addEventListener('click',()=>{ localStorage
   });
 
   btnWrapSelection.addEventListener('click',()=>{
-    // Wrap the currently selected text/content inside RT
     focusRTAndRestore();
     const sel=window.getSelection(); if(!sel || sel.rangeCount===0) return;
-    const range=sel.getRangeAt(0);
-    if(!rt.contains(range.commonAncestorContainer)) return;
+    const range=sel.getRangeAt(0); if(!rt.contains(range.commonAncestorContainer)) return;
     const box=document.createElement('div'); box.className='wrap selectable';
-    try{
-      range.surroundContents(box);
-      sel.removeAllRanges();
-      const r=document.createRange(); r.selectNodeContents(box); r.collapse(false); sel.addRange(r);
-    }catch(_){
-      const contents=range.cloneContents(); box.appendChild(contents);
-      range.deleteContents(); range.insertNode(box);
-    }
+    try{ range.surroundContents(box); }
+    catch{ const contents=range.cloneContents(); range.deleteContents(); box.appendChild(contents); range.insertNode(box); }
+    const r2=document.createRange(); r2.selectNodeContents(box); r2.collapse(false); sel.removeAllRanges(); sel.addRange(r2);
     saveRangeFromRT();
   });
 
-  // ---- Hand/Select: move/resize images, tables, wrapped blocks
-  btnSelectTool.addEventListener('click',()=>{ hand=!hand; btnSelectTool.classList.toggle('active',hand); setActiveTool(hand?'hand':'text'); if(!hand){ document.querySelectorAll('.selectable.selected').forEach(n=>n.classList.remove('selected')); active=null; } });
-  rt.addEventListener('pointerdown',(e)=>{
+  // ---- Hand mode: select/move/resize any .selectable AND the drawing overlay
+  const pageInner=document.getElementById('pageInner');
+  pageInner.addEventListener('pointerdown',(e)=>{
     if(!hand) return;
-    const target=e.target.closest('.selectable');
+    // prefer selectable elements first
+    const target = e.target.closest('.selectable') || (drawBox && (e.target===drawOverlay || e.target===drawBox) ? drawBox : null);
     document.querySelectorAll('.selectable.selected').forEach(n=>n.classList.remove('selected'));
     active = target || null; if(!active) return;
     active.classList.add('selected');
 
-    // Ensure absolute positioning anchored to current screen position
-    const pr=rt.getBoundingClientRect(), ar=active.getBoundingClientRect();
-    if(getComputedStyle(active).position!=='absolute'){
+    // Absolute‑position the element at its visual spot
+    const pr=rt.getBoundingClientRect();
+    const ar=active.getBoundingClientRect();
+    if(getComputedStyle(active).position!=='absolute' && active!==drawBox){
       active.style.position='absolute';
       active.style.left=(ar.left-pr.left+rt.scrollLeft)+'px';
       active.style.top =(ar.top -pr.top +rt.scrollTop )+'px';
       active.style.width=ar.width+'px';
+      active.style.height=ar.height+'px';
     }
+
     const sx=e.clientX, sy=e.clientY;
     const start={left:parseFloat(active.style.left)||0, top:parseFloat(active.style.top)||0, w:parseFloat(active.style.width)||ar.width, h:parseFloat(active.style.height)||ar.height};
-    const isResize = (e.clientX > ar.right-16 && e.clientY > ar.bottom-16);
+    const isResize=(e.clientX>ar.right-16 && e.clientY>ar.bottom-16);
 
     function onMove(ev){
       const dx=ev.clientX - sx, dy=ev.clientY - sy;
       if(isResize){
-        active.style.width =(Math.max(30, start.w + dx))+'px';
-        active.style.height=(Math.max(30, start.h + dy))+'px';
+        if(active.tagName==='IMG'){ // keep image aspect
+          const ratio = (active.naturalWidth||start.w) / (active.naturalHeight||start.h);
+          const newW=Math.max(30,start.w+dx); const newH=Math.max(30,(newW/ratio));
+          active.style.width=newW+'px'; active.style.height=newH+'px';
+        }else{
+          active.style.width =Math.max(30,start.w+dx)+'px';
+          active.style.height=Math.max(30,start.h+dy)+'px';
+        }
       }else{
-        active.style.left=(start.left + dx)+'px';
-        active.style.top =(start.top  + dy)+'px';
+        active.style.left=(start.left+dx)+'px';
+        active.style.top =(start.top +dy)+'px';
       }
     }
     function onUp(){ removeEventListener('pointermove',onMove); removeEventListener('pointerup',onUp); }
@@ -465,8 +510,7 @@ document.getElementById('logoutBtn').addEventListener('click',()=>{ localStorage
   }
   function newPage(){
     pages[current]=pageSnapshot();
-    const base=pageSnapshot();
-    const n=parseInt(base.header.page,10); if(!isNaN(n)) base.header.page=String(n+1);
+    const base=pageSnapshot(); const n=parseInt(base.header.page,10); if(!isNaN(n)) base.header.page=String(n+1);
     base.text=''; base.drawing=null; pages.splice(current+1,0,base); current+=1; renderPage(base); updatePager(); autoSaveSoon();
   }
   function goto(delta){ pages[current]=pageSnapshot(); const next=current+delta; if(next<0||next>=pages.length) return; current=next; renderPage(pages[current]); autoSaveSoon(); }
@@ -495,6 +539,14 @@ document.getElementById('logoutBtn').addEventListener('click',()=>{ localStorage
   }
   document.getElementById('export').addEventListener('click',async()=>{ const url=await composePageImage(); const a=document.createElement('a'); a.href=url; a.download='notebook-page.png'; a.click(); });
   document.getElementById('print').addEventListener('click',async()=>{ const url=await composePageImage(); const w=window.open('','_blank'); w.document.write(`<!DOCTYPE html><html><head><title>Print</title><style>html,body{margin:0}img{width:100%;height:auto}</style></head><body><img src="${url}"/></body></html>`); w.document.close(); w.onload=()=>w.print(); });
+
+  // ---- Clear whole page (drawing + text + header)
+  document.getElementById('clear').addEventListener('click',()=>{
+    if(drawBox) commitDrawOverlay();
+    const rect=fg.getBoundingClientRect(); ctx.clearRect(0,0,rect.width,rect.height);
+    rt.innerHTML=''; hTitle.value=''; hSection.value=''; hPage.value=''; hDate.value=new Date().toISOString().slice(0,10);
+    drawBackground(); autoSaveSoon();
+  });
 
   // ---- Init
   hDate.value=new Date().toISOString().slice(0,10);
