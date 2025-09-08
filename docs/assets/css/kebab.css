@@ -3,6 +3,8 @@
   z-index: 1001; cursor: pointer; border: none; background: transparent;
   font-size: 20px; line-height: 1;
 }
+/* Prevent decorative overlays from stealing taps/clicks */
+.header-overlay, .hero-overlay { pointer-events: none; }
 /* Bigger hit area = first tap always hits */
 #moreBtn::after{ content:""; position:absolute; inset:-10px; }
 
