@@ -204,6 +204,22 @@
 @page { size: A4 portrait; margin: 12mm; }
 
 </style>
+    <style>
+/* Drawing should receive pen/touch gestures, not the browser’s scrolling/zooming */
+#nbCanvas { touch-action: none; -ms-touch-action: none; }
+
+/* Lightweight ruled/grid overlay that never blocks drawing (click-through) */
+.page { position: relative; }
+.page .ruling {
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background-size: 1px 28px;
+  background-image: linear-gradient(to bottom, rgba(0,0,0,.12) 1px, transparent 1px);
+}
+.page canvas { position: relative; z-index: 1; }
+
+/* If you have no .page wrapper, the script will create one around the canvas */
+</style>
+
 </head>
 <body>
 <div id="nb-toolbar" style="display:flex;gap:8px;align-items:center;margin:8px 0 12px;">
@@ -668,5 +684,83 @@
 </script>
 <script src="assets/js/nav-fix.js"></script>
 <script src="assets/js/notebook-fixes.js"></script>
+    <script>
+/* Minimal, surgical fixes: pointer drawing + ruled overlay */
+(function(){
+  // Find the notebook canvas robustly
+  const canvas = document.querySelector('#nbCanvas, .page canvas, canvas');
+  if (!canvas) return;
+
+  // Ensure canvas is inside a .page wrapper so we can place a non-blocking ruled background
+  let page = canvas.closest('.page');
+  if (!page) {
+    page = document.createElement('div'); page.className = 'page';
+    canvas.parentNode.insertBefore(page, canvas); page.appendChild(canvas);
+  }
+
+  // Create the click-through ruling layer (doesn't block drawing)
+  let ruling = page.querySelector('.ruling');
+  if (!ruling) { ruling = document.createElement('div'); ruling.className = 'ruling'; page.insertBefore(ruling, canvas); }
+
+  // If you have a "Ruled" selector, we hook it; otherwise default to ruled
+  function setRuling(mode, spacing=28, color='rgba(0,0,0,.12)'){
+    if (mode === 'plain') {
+      ruling.style.backgroundImage = 'none';
+    } else if (mode === 'grid') {
+      ruling.style.backgroundImage =
+        `linear-gradient(to bottom, ${color} 1px, transparent 1px),
+         linear-gradient(to right,  ${color} 1px, transparent 1px)`;
+      ruling.style.backgroundSize = `1px ${spacing}px, ${spacing}px 1px`;
+    } else { // ruled
+      ruling.style.backgroundImage =
+        `linear-gradient(to bottom, ${color} 1px, transparent 1px)`;
+      ruling.style.backgroundSize = `1px ${spacing}px`;
+    }
+  }
+  // Try to detect your existing "Ruled" control; fall back to ruled
+  const ruledSel = document.querySelector('#ruled, select[name="ruled"], select#ruling, select[data-role="ruling"]');
+  const spacingInput = document.querySelector('#ruleSpacing, input[name="ruleSpacing"]');
+  if (ruledSel) {
+    const apply = () => setRuling(ruledSel.value || 'ruled', spacingInput ? +spacingInput.value || 28 : 28);
+    ruledSel.addEventListener('change', apply);
+    if (spacingInput) spacingInput.addEventListener('input', apply);
+    apply();
+  } else {
+    setRuling('ruled');
+  }
+
+  // Pointer-based drawing (works for mouse, touch, and pen with pressure)
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  let drawing = false, last = null;
+  function baseWidth(){ const el = document.getElementById('penSize'); return el ? parseFloat(el.value || '2') : 2; }
+  function penWidth(p){ return baseWidth() * (p ? (0.5 + p) : 1); }
+
+  canvas.addEventListener('pointerdown', (e) => {
+    canvas.setPointerCapture(e.pointerId);
+    drawing = true;
+    last = { x: e.offsetX, y: e.offsetY, p: e.pressure || 0.5 };
+    // Optionally draw a tiny dot to avoid gaps on taps
+    ctx.beginPath(); ctx.arc(last.x, last.y, Math.max(1, penWidth(last.p)/2), 0, Math.PI*2); ctx.fill();
+  });
+
+  canvas.addEventListener('pointermove', (e) => {
+    if (!drawing) return;
+    const cur = { x: e.offsetX, y: e.offsetY, p: e.pressure || 0.5 };
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.lineWidth = penWidth((last.p + cur.p) / 2);
+    // Color: if you already have a color picker, it’ll still work; otherwise default current strokeStyle
+    // You can force a default with: ctx.strokeStyle = '#000';
+    ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(cur.x, cur.y); ctx.stroke();
+    last = cur;
+  });
+
+  canvas.addEventListener('pointerup', (e) => {
+    if (!drawing) return;
+    drawing = false;
+    try { canvas.releasePointerCapture(e.pointerId); } catch {}
+  });
+})();
+</script>
+
 </body>
 </html>
