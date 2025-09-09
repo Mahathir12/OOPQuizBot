@@ -12,7 +12,7 @@
   html,body{margin:0;padding:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
   body{color:#111;background:#fff;line-height:1.5;overflow-x:hidden}
 
-  /* ===== Header (same as Home) ===== */
+  /* ===== Header (same look/behavior as index) ===== */
   .site-header{position:fixed;inset:0 0 auto 0;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:12px 28px;background:rgba(255,255,255,.06);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid rgba(255,255,255,.15);transition:all .3s ease;color:#fff}
   .site-header.scrolled{background:rgba(0,0,0,.75);border-bottom-color:rgba(255,255,255,.08)}
   .brand{font-weight:700;letter-spacing:.3px}
@@ -31,6 +31,7 @@
   /* ===== Notebook UI ===== */
   main{padding:120px 28px 80px;max-width:1200px;margin:0 auto}
   .wrapper{display:grid;gap:18px}
+
   .toolbar{display:flex;gap:10px;align-items:center;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:8px;flex-wrap:wrap;box-shadow:var(--shadow)}
   .toolbar .group{display:flex;gap:6px;align-items:center;padding-right:10px;border-right:1px solid #eee}
   .toolbar .group:last-child{border-right:0}
@@ -57,28 +58,24 @@
   #drawCanvas{z-index:2;pointer-events:auto;touch-action:none}
   #rt img{max-width:100%;height:auto;border-radius:6px;display:inline-block}
 
-  /* Selectables + handle */
+  /* Selectable things + handle */
   .selectable{display:inline-block}
   .selected{outline:1px dashed #888;position:relative}
   .selected::after{content:"";position:absolute;right:-6px;bottom:-6px;width:12px;height:12px;border:1px solid #888;background:#fff;cursor:se-resize;border-radius:2px}
 
-  /* Tables behave like blocks (so width/height apply) */
-  .nb-table{border-collapse:collapse;display:inline-block;table-layout:fixed}
+  .nb-table{border-collapse:collapse}
   .nb-table td{border:1px solid #aaa;min-width:60px;padding:4px}
 
   .wrap{border:1px dashed #bbb;padding:6px;border-radius:6px;display:inline-block;background:transparent}
 
-  /* Marquee selection */
+  /* Marquee selection rectangle */
   #marquee{position:absolute;border:1px dashed #388eff;background:rgba(56,142,255,.12);pointer-events:none;z-index:4}
-
-  /* Floating table toolbar */
-  .table-tools{position:absolute;z-index:5;display:none;gap:6px;background:#111;color:#fff;border:1px solid #333;border-radius:8px;padding:6px;box-shadow:0 8px 24px rgba(0,0,0,.35)}
-  .table-tools button{border:1px solid #333;background:#222;color:#fff;border-radius:6px;padding:6px 8px;cursor:pointer}
-  .table-tools button:hover{background:#333}
 
   @media print{
     header,.toolbar,.note,#pageHeader{display:none!important}
-    main{padding:0!important}.page{width:auto;aspect-ratio:auto;box-shadow:none;border-radius:0}.page-inner{inset:0}
+    main{padding:0!important}
+    .page{width:auto;aspect-ratio:auto;box-shadow:none;border-radius:0}
+    .page-inner{inset:0}
   }
   @page{size:A4 portrait;margin:12mm}
 </style>
@@ -118,7 +115,7 @@
     <label class="toolbtn">📷 Insert Image <input id="imgPick" type="file" accept="image/*" hidden></label>
     <button id="btnInsertTable" class="toolbtn">▦ Insert Table</button>
     <button id="btnWrapSelection" class="toolbtn">□ Wrap Selection</button>
-    <button id="btnSelectTool" class="toolbtn" title="Select/Move/Resize">🖐️ Select</button>
+    <button id="btnSelectTool" class="toolbtn" title="Select/Move/Resize">🖐 Select</button>
   </div>
 
   <div class="wrapper">
@@ -198,35 +195,28 @@
             <span class="header-label">Date</span><input id="hDate" class="input" type="date" style="width:auto">
           </div>
 
-          <!-- Layers -->
+          <!-- The three layers -->
           <canvas id="bgCanvas"></canvas>
           <div id="rt" contenteditable="true" placeholder="Type your notes here..."></div>
           <canvas id="drawCanvas"></canvas>
-
-          <!-- Floating tools for tables -->
-          <div id="tableTools" class="table-tools" role="toolbar" aria-label="Table tools">
-            <button id="tblAddRow">➕Row</button>
-            <button id="tblDelRow">➖Row</button>
-            <button id="tblAddCol">➕Col</button>
-            <button id="tblDelCol">➖Col</button>
-          </div>
         </div>
       </div>
     </div>
 
     <div class="note">
-      <b>Use:</b> Insert Image/Table → <b>🖐️ Select</b> to move/resize.  
-      Drag on empty space to <b>marquee‑select</b> items or a drawing region; or <b>click once</b> on ink to pick a nearby 64×64 fragment.  
-      Press <kbd>Delete</kbd> to remove selection. Page/ruled/margin colors update instantly.
+      <b>How to use:</b> Insert Image/Table → turn on <b>🖐 Select</b> → click item to move; drag the tiny corner square to resize.  
+      In Select mode, drag on empty space to **marquee‑select** items or a **region of the drawing**. Press <kbd>Delete</kbd> to remove selection.  
+      Page color, ruled/grid, and margin color update instantly while you adjust them.
     </div>
   </div>
 </main>
 
 <script>
-/* ===== Header/theme + robust ⋯ menu (same as Home) ===== */
+/* ===== Header/theme + robust ⋯ menu (same policy as on Home) ===== */
 const header = document.getElementById('siteHeader');
 const onScroll = () => { if (scrollY>10) header.classList.add('scrolled'); else header.classList.remove('scrolled'); };
 onScroll(); addEventListener('scroll', onScroll, {passive:true});
+
 const root=document.documentElement; const savedTheme=localStorage.getItem('theme'); if(savedTheme) root.setAttribute('data-theme',savedTheme);
 const themeToggle=document.getElementById('themeToggle'), iconMoon=document.getElementById('iconMoon'), iconSun=document.getElementById('iconSun');
 function setIcon(){ const light=root.getAttribute('data-theme')==='light'; iconSun.style.display=light?'none':'inline'; iconMoon.style.display=light?'inline':'none'; }
@@ -244,71 +234,84 @@ themeToggle.addEventListener('click',()=>{ const isLight=root.getAttribute('data
 </script>
 
 <script>
-/* ========================= NOTEBOOK ENGINE v9 ========================= */
+/* ========================= NOTEBOOK ENGINE v8 ========================= */
 (function(){
-  // DOM
+  // ---- DOM (create missing pieces safely if any)
   const bg = document.getElementById('bgCanvas');
   const fg = document.getElementById('drawCanvas');
   const rt = document.getElementById('rt');
   const pageInner = document.getElementById('pageInner');
-  const header = document.getElementById('pageHeader');
-  const ctxBg = bg.getContext('2d');
-  const ctx = fg.getContext('2d');
+  const headBar = document.getElementById('pageHeader');
 
-  // Controls
-  const toolButtons={text:el('toolText'),pencil:el('toolPencil'),writing:el('toolWriting'),drawing:el('toolDrawing'),highlighter:el('toolHighlighter'),hd:el('toolHD'),eraser:el('toolEraser')};
-  const sizeEl=el('size'), opacityEl=el('opacity'), inkEl=el('inkColor');
-  const fontSel=el('fontName'), fontSizeSel=el('fontSize'), txtColorEl=el('textColor'), bgColorEl=el('bgColor');
-  const alignLeft=el('alignLeft'), alignCenter=el('alignCenter'), alignRight=el('alignRight'), clearFmt=el('clearFmt');
-  const insertImg=el('insertImg'), imgPick=el('imgPick');
-  const layoutSel=el('layout'), spacingEl=el('spacing'), layoutColorEl=el('layoutColor'), pageColorEl=el('pageColor'), marginToggle=el('showMargin'), marginColorEl=el('marginColor');
-  const hTitle=el('hTitle'), hSection=el('hSection'), hPage=el('hPage'), hDate=el('hDate');
-  const btnNewPage=el('newPage'), btnPrev=el('prevPage'), btnNext=el('nextPage'), pageIndicator=el('pageIndicator');
-  const btnInsertTable=el('btnInsertTable'), btnWrapSelection=el('btnWrapSelection'), btnSelectTool=el('btnSelectTool'), btnClear=el('clear');
-  const tblTools=el('tableTools'), tblAddRow=el('tblAddRow'), tblDelRow=el('tblDelRow'), tblAddCol=el('tblAddCol'), tblDelCol=el('tblDelCol');
+  const ctxBg = bg.getContext('2d');     // background: page color + rulings
+  const ctx   = fg.getContext('2d');     // foreground: drawing ink
 
-  function el(id){return document.getElementById(id)}
+  // ---- Controls
+  const toolButtons = {
+    text:  document.getElementById('toolText'),
+    pencil:document.getElementById('toolPencil'),
+    writing:document.getElementById('toolWriting'),
+    drawing:document.getElementById('toolDrawing'),
+    highlighter:document.getElementById('toolHighlighter'),
+    hd:    document.getElementById('toolHD'),
+    eraser:document.getElementById('toolEraser')
+  };
+  const sizeEl=document.getElementById('size'), opacityEl=document.getElementById('opacity'), inkEl=document.getElementById('inkColor');
+  const fontSel=document.getElementById('fontName'), fontSizeSel=document.getElementById('fontSize'), txtColorEl=document.getElementById('textColor'), bgColorEl=document.getElementById('bgColor');
+  const alignLeft=document.getElementById('alignLeft'), alignCenter=document.getElementById('alignCenter'), alignRight=document.getElementById('alignRight'), clearFmt=document.getElementById('clearFmt');
+  const insertImg=document.getElementById('insertImg'), imgPick=document.getElementById('imgPick');
+  const layoutSel=document.getElementById('layout'), spacingEl=document.getElementById('spacing'), layoutColorEl=document.getElementById('layoutColor'), pageColorEl=document.getElementById('pageColor'), marginToggle=document.getElementById('showMargin'), marginColorEl=document.getElementById('marginColor');
+  const hTitle=document.getElementById('hTitle'), hSection=document.getElementById('hSection'), hPage=document.getElementById('hPage'), hDate=document.getElementById('hDate');
+  const btnNewPage=document.getElementById('newPage'), btnPrev=document.getElementById('prevPage'), btnNext=document.getElementById('nextPage'), pageIndicator=document.getElementById('pageIndicator');
+  const btnInsertTable=document.getElementById('btnInsertTable'), btnWrapSelection=document.getElementById('btnWrapSelection'), btnSelectTool=document.getElementById('btnSelectTool'), btnClear=document.getElementById('clear');
 
-  // State
-  let tool='text', drawing=false,lastPt=null;
+  // ---- State
+  let tool='text', drawing=false, lastPt=null;
   let hand=false, active=null, savedRange=null;
   let marquee=null, marqueeStart=null;
   let pages=[], current=0;
   const dpr=window.devicePixelRatio||1;
 
-  /* ---------- Size + background ---------- */
+  // ===== Layout sizing + background drawing
   function resizeCanvases(){
-    const R=pageInner.getBoundingClientRect(), width=Math.round(R.width), height=Math.round(R.height-header.offsetHeight);
+    const R=pageInner.getBoundingClientRect(), w=Math.round(R.width), h=Math.round(R.height - headBar.offsetHeight);
     [bg,fg].forEach(c=>{
-      const snap=(c===fg)?c.toDataURL():null;
-      c.width=width*dpr; c.height=height*dpr; c.style.width=width+'px'; c.style.height=height+'px'; c.style.top=header.offsetHeight+'px';
+      const snapshot=(c===fg)?c.toDataURL():null;
+      c.width=w*dpr; c.height=h*dpr; c.style.width=w+'px'; c.style.height=h+'px'; c.style.top=headBar.offsetHeight+'px';
       const cctx=c.getContext('2d'); cctx.setTransform(1,0,0,1,0,0); cctx.scale(dpr,dpr);
-      if(c===fg && snap && snap.length>100){ const img=new Image(); img.onload=()=>cctx.drawImage(img,0,0,width,height); img.src=snap; }
+      if(c===fg && snapshot && snapshot.length>100){ const im=new Image(); im.onload=()=>cctx.drawImage(im,0,0,w,h); im.src=snapshot; }
     });
-    rt.style.top=header.offsetHeight+'px'; rt.style.height=(R.height-header.offsetHeight)+'px';
+    rt.style.top=headBar.offsetHeight+'px'; rt.style.height=(R.height-headBar.offsetHeight)+'px';
     drawBackground();
   }
+
   function drawBackground(){
-    const R=pageInner.getBoundingClientRect(), w=Math.round(R.width), h=Math.round(R.height-header.offsetHeight);
+    const R=pageInner.getBoundingClientRect(), w=Math.round(R.width), h=Math.round(R.height - headBar.offsetHeight);
     ctxBg.clearRect(0,0,w,h);
     ctxBg.fillStyle=pageColorEl.value||'#ffffff'; ctxBg.fillRect(0,0,w,h);
+
     const spacing=+spacingEl.value, lc=layoutColorEl.value, layout=layoutSel.value;
     ctxBg.strokeStyle=lc; ctxBg.fillStyle=lc; ctxBg.globalAlpha=.35; ctxBg.lineWidth=1;
-    if(layout==='ruled'||layout==='grid'){ for(let y=0;y<h;y+=spacing){ ctxBg.beginPath(); ctxBg.moveTo(0,y); ctxBg.lineTo(w,y); ctxBg.stroke(); } }
+
+    if(layout==='ruled' || layout==='grid'){ for(let y=0;y<h;y+=spacing){ ctxBg.beginPath(); ctxBg.moveTo(0,y); ctxBg.lineTo(w,y); ctxBg.stroke(); } }
     if(layout==='grid'){ for(let x=0;x<w;x+=spacing){ ctxBg.beginPath(); ctxBg.moveTo(x,0); ctxBg.lineTo(x,h); ctxBg.stroke(); } }
     if(layout==='dotted'){ const r=1.2; for(let y=0;y<h;y+=spacing){ for(let x=0;x<w;x+=spacing){ ctxBg.beginPath(); ctxBg.arc(x,y,r,0,Math.PI*2); ctxBg.fill(); } } }
     ctxBg.globalAlpha=1;
+
     if(marginToggle.checked){ ctxBg.strokeStyle=marginColorEl.value; ctxBg.lineWidth=2; ctxBg.beginPath(); ctxBg.moveTo(72,0); ctxBg.lineTo(72,h); ctxBg.stroke(); }
   }
-  addEventListener('resize',resizeCanvases);
+
+  addEventListener('resize', resizeCanvases);
+  // Instant redraw while changing colors/spacing
   [layoutSel, spacingEl].forEach(el=>el.addEventListener('change',drawBackground));
   [layoutColorEl, pageColorEl, marginColorEl, spacingEl].forEach(el=>el.addEventListener('input',drawBackground));
   marginToggle.addEventListener('change',drawBackground);
 
-  /* ---------- Tools ---------- */
+  // ===== Tool switching
   function setActiveTool(t){
     tool=t; Object.keys(toolButtons).forEach(k=>toolButtons[k].classList.toggle('active',k===t));
-    if(t==='hand'){ fg.style.pointerEvents='none'; rt.contentEditable='false'; } else { fg.style.pointerEvents=(t==='text')?'none':'auto'; rt.contentEditable='true'; if(t==='text') rt.focus(); }
+    if(t==='hand'){ fg.style.pointerEvents='none'; rt.contentEditable='false'; }
+    else{ fg.style.pointerEvents=(t==='text')?'none':'auto'; rt.contentEditable='true'; if(t==='text') rt.focus(); }
     if(t==='highlighter'){ opacityEl.value=.35; sizeEl.value=Math.max(10,+sizeEl.value||10); }
     else if(t==='pencil'){ opacityEl.value=1; sizeEl.value=2; }
     else if(t==='writing'){ opacityEl.value=1; sizeEl.value=4; }
@@ -323,25 +326,25 @@ themeToggle.addEventListener('click',()=>{ const isLight=root.getAttribute('data
   toolButtons.hd.addEventListener('click',()=>setActiveTool('hd'));
   toolButtons.eraser.addEventListener('click',()=>setActiveTool('eraser'));
 
-  /* ---------- Drawing ---------- */
-  function getPos(e){ const r=fg.getBoundingClientRect(); const p=e.touches?e.touches[0]:e; return {x:p.clientX-r.left,y:p.clientY-r.top,t:e.timeStamp||Date.now(),p:p.pressure||.5}; }
+  // ===== Drawing (mouse/touch/pen; HD uses pressure/speed)
+  function getPos(e){ const r=fg.getBoundingClientRect(); const p=e.touches?e.touches[0]:e; return {x:p.clientX-r.left, y:p.clientY-r.top, t:e.timeStamp||Date.now(), p:p.pressure||.5}; }
   function drawSeg(a,b,w,col,alpha){ ctx.globalCompositeOperation='source-over'; ctx.strokeStyle=col; ctx.globalAlpha=alpha; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.lineWidth=w; ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke(); ctx.globalAlpha=1; }
   function stroke(a,b,e){
     const base=+sizeEl.value, op=+opacityEl.value;
     if(tool==='eraser'){ ctx.globalCompositeOperation='destination-out'; ctx.strokeStyle='#000'; ctx.lineWidth=base; ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke(); ctx.globalCompositeOperation='source-over'; return; }
-    if(tool==='hd'){ const dt=Math.max(1,b.t-a.t), dist=Math.hypot(b.x-a.x,b.y-a.y), speed=Math.min(1,(dist/dt)/1.2), pressure=e?.pressure ?? ((a.p+b.p)/2||.5), dyn=(1-speed)*.9 + pressure*.6, w=Math.max(.5,base*(.6+dyn)); drawSeg(a,b,w,inkEl.value,Math.min(1,op)); drawSeg(a,b,w*.6,inkEl.value,Math.min(1,op*.7)); return; }
+    if(tool==='hd'){ const dt=Math.max(1,b.t-a.t); const dist=Math.hypot(b.x-a.x,b.y-a.y); const speed=Math.min(1,(dist/dt)/1.2); const pressure=e?.pressure ?? ((a.p+b.p)/2||.5); const dyn=(1-speed)*.9 + pressure*.6; const w=Math.max(.5, base*(.6+dyn)); drawSeg(a,b,w,inkEl.value,Math.min(1,op)); drawSeg(a,b,w*.6,inkEl.value,Math.min(1,op*.7)); return; }
     drawSeg(a,b,base,inkEl.value,op);
   }
   fg.addEventListener('pointerdown',(e)=>{ if(tool==='text'||tool==='hand') return; drawing=true; lastPt=getPos(e); fg.setPointerCapture(e.pointerId); ctx.beginPath(); ctx.arc(lastPt.x,lastPt.y,Math.max(1,(+sizeEl.value*(.5+(e.pressure||.5)))/2),0,Math.PI*2); ctx.fillStyle=inkEl.value; ctx.fill(); });
   fg.addEventListener('pointermove',(e)=>{ if(!drawing) return; const p=getPos(e); stroke(lastPt,p,e); lastPt=p; });
   fg.addEventListener('pointerup',()=>{ drawing=false; });
 
-  /* ---------- Caret memory so inserts go into the page ---------- */
+  // ===== Caret memory so image/table insert at page caret (not toolbar)
   function saveRangeFromRT(){ const sel=getSelection(); if(!sel||!sel.rangeCount) return; const r=sel.getRangeAt(0); if(rt.contains(r.startContainer)&&rt.contains(r.endContainer)) savedRange=r.cloneRange(); }
-  function focusRTAndRestore(where='end'){ rt.focus(); const sel=getSelection(); sel.removeAllRanges(); if(savedRange) sel.addRange(savedRange); else { const r=document.createRange(); r.selectNodeContents(rt); where==='start'?r.collapse(true):r.collapse(false); sel.addRange(r);} }
+  function focusRTAndRestore(where='end'){ rt.focus(); const sel=getSelection(); sel.removeAllRanges(); if(savedRange){ sel.addRange(savedRange); } else { const r=document.createRange(); r.selectNodeContents(rt); where==='start'?r.collapse(true):r.collapse(false); sel.addRange(r); } }
   rt.addEventListener('keyup',saveRangeFromRT); rt.addEventListener('mouseup',saveRangeFromRT); rt.addEventListener('input',saveRangeFromRT); addEventListener('selectionchange',saveRangeFromRT);
 
-  /* ---------- Inserts ---------- */
+  // ===== Insert Image / Table / Wrap Selection
   function insertAtCaret(node){
     focusRTAndRestore();
     const sel=getSelection(); if(!sel||!sel.rangeCount){ rt.appendChild(node); return; }
@@ -354,179 +357,110 @@ themeToggle.addEventListener('click',()=>{ const isLight=root.getAttribute('data
   insertImg.addEventListener('change',e=>{ onImagePicked(e.target.files?.[0]); e.target.value=''; });
   imgPick  .addEventListener('change',e=>{ onImagePicked(e.target.files?.[0]); e.target.value=''; });
 
-  btnInsertTable.addEventListener('click',()=>{
-    focusRTAndRestore();
-    const t=document.createElement('table'); t.className='nb-table selectable';
-    t.style.width='240px'; t.style.height='120px'; t.style.position='relative';
-    for(let r=0;r<2;r++){ const tr=document.createElement('tr'); for(let c=0;c<2;c++){ const td=document.createElement('td'); td.innerHTML='<br>'; tr.appendChild(td);} t.appendChild(tr); }
-    insertAtCaret(t);
-  });
+  btnInsertTable.addEventListener('click',()=>{ focusRTAndRestore(); const t=document.createElement('table'); t.className='nb-table selectable'; for(let r=0;r<2;r++){ const tr=document.createElement('tr'); for(let c=0;c<2;c++){ const td=document.createElement('td'); td.innerHTML='<br>'; tr.appendChild(td);} t.appendChild(tr);} insertAtCaret(t); });
 
-  btnWrapSelection.addEventListener('click',()=>{
-    focusRTAndRestore();
-    const sel=getSelection(); if(!sel||!sel.rangeCount) return;
-    const range=sel.getRangeAt(0); if(!rt.contains(range.commonAncestorContainer)) return;
-    const box=document.createElement('div'); box.className='wrap selectable';
-    try{ range.surroundContents(box); }
-    catch{ const frag=range.cloneContents(); range.deleteContents(); box.appendChild(frag); range.insertNode(box); }
-    const r2=document.createRange(); r2.selectNodeContents(box); r2.collapse(false); sel.removeAllRanges(); sel.addRange(r2);
-    saveRangeFromRT();
-  });
+  btnWrapSelection.addEventListener('click',()=>{ focusRTAndRestore(); const sel=getSelection(); if(!sel||!sel.rangeCount) return; const range=sel.getRangeAt(0); if(!rt.contains(range.commonAncestorContainer)) return; const box=document.createElement('div'); box.className='wrap selectable'; try{ range.surroundContents(box); }catch{ const frag=range.cloneContents(); range.deleteContents(); box.appendChild(frag); range.insertNode(box);} const r2=document.createRange(); r2.selectNodeContents(box); r2.collapse(false); sel.removeAllRanges(); sel.addRange(r2); saveRangeFromRT(); });
 
-  /* ---------- Select mode (items + marquee + click-to-pick ink) ---------- */
-  btnSelectTool.addEventListener('click',()=>{
-    hand=!hand; btnSelectTool.classList.toggle('active',hand);
-    setActiveTool(hand?'hand':'text'); if(!hand){ commitOverlays(); clearSelection(); hideTableTools(); }
-  });
+  // ===== Select/Hand mode (move/resize items + marquee + drawing fragments)
+  btnSelectTool.addEventListener('click',()=>{ hand=!hand; btnSelectTool.classList.toggle('active',hand); setActiveTool(hand?'hand':'text'); if(!hand){ commitOverlays(); clearSelection(); } });
 
-  function clearSelection(){ pageInner.querySelectorAll('.selected').forEach(n=>n.classList.remove('selected')); active=null; hideTableTools(); }
-  function showTableToolsAround(table){
-    const r=table.getBoundingClientRect(), P=pageInner.getBoundingClientRect();
-    tblTools.style.left=(r.left-P.left)+'px';
-    tblTools.style.top =(r.top -P.top - 34)+'px';
-    tblTools.style.display='flex';
-  }
-  function hideTableTools(){ tblTools.style.display='none'; }
+  function clearSelection(){ pageInner.querySelectorAll('.selected').forEach(n=>n.classList.remove('selected')); active=null; }
 
+  // Move/resize for any .selectable or overlay
   pageInner.addEventListener('pointerdown',(e)=>{
     if(!hand) return;
 
-    // Click on selectable element?
-    const tgt=e.target.closest('.selectable,.overlay');
-    if(tgt){
-      clearSelection(); active=tgt; active.classList.add('selected');
-      if(active.tagName==='TABLE') showTableToolsAround(active); else hideTableTools();
-
-      // Absolute position for items inside rt
-      const pr=rt.getBoundingClientRect(), ar=active.getBoundingClientRect();
-      if(active.closest('#rt') && getComputedStyle(active).position!=='absolute'){
-        active.style.position='absolute';
-        active.style.left=(ar.left-pr.left+rt.scrollLeft)+'px';
-        active.style.top =(ar.top -pr.top +rt.scrollTop )+'px';
-        active.style.width=ar.width+'px'; active.style.height=ar.height+'px';
-      }
-
-      const sx=e.clientX, sy=e.clientY;
-      const start={ left:parseFloat(active.style.left)|| (ar.left - pageInner.getBoundingClientRect().left),
-                    top :parseFloat(active.style.top )|| (ar.top  - pageInner.getBoundingClientRect().top ),
-                    w   :parseFloat(active.style.width)|| ar.width,
-                    h   :parseFloat(active.style.height)|| ar.height };
-      const isResize=(e.clientX>ar.right-16 && e.clientY>ar.bottom-16);
-
-      function onMove(ev){
-        const dx=ev.clientX-sx, dy=ev.clientY-sy;
-        if(isResize){
-          if(active.tagName==='IMG'){
-            const ratio=(active.naturalWidth||start.w)/(active.naturalHeight||start.h);
-            const newW=Math.max(50,start.w+dx), newH=Math.max(30,newW/ratio);
-            active.style.width=newW+'px'; active.style.height=newH+'px';
-          }else{ // TABLE or WRAP
-            active.style.width =Math.max(60,start.w+dx)+'px';
-            active.style.height=Math.max(40,start.h+dy)+'px';
-          }
-        }else{
-          active.style.left=(start.left+dx)+'px';
-          active.style.top =(start.top +dy)+'px';
-        }
-      }
-      function onUp(){ removeEventListener('pointermove',onMove); removeEventListener('pointerup',onUp); }
-      addEventListener('pointermove',onMove); addEventListener('pointerup',onUp);
-      return;
+    // Start marquee if clicked empty
+    if(!e.target.closest('.selectable') && !e.target.closest('.overlay')){
+      startMarquee(e); return;
     }
 
-    // Otherwise: start marquee (or click-pick tiny selection)
-    startMarqueeOrPick(e);
+    clearSelection();
+    active = e.target.closest('.selectable,.overlay');
+    if(!active) return;
+    active.classList.add('selected');
+
+    // Absolute-position elements that live inside #rt
+    const pr=rt.getBoundingClientRect(), ar=active.getBoundingClientRect();
+    if(active.closest('#rt') && getComputedStyle(active).position!=='absolute'){
+      active.style.position='absolute';
+      active.style.left =(ar.left-pr.left+rt.scrollLeft)+'px';
+      active.style.top  =(ar.top -pr.top +rt.scrollTop )+'px';
+      active.style.width =ar.width+'px';
+      active.style.height=ar.height+'px';
+    }
+
+    const sx=e.clientX, sy=e.clientY;
+    const start={ left:parseFloat(active.style.left)|| (ar.left - pageInner.getBoundingClientRect().left),
+                  top :parseFloat(active.style.top )|| (ar.top  - pageInner.getBoundingClientRect().top ),
+                  w   :parseFloat(active.style.width)|| ar.width,
+                  h   :parseFloat(active.style.height)|| ar.height };
+    const isResize=(e.clientX>ar.right-16 && e.clientY>ar.bottom-16);
+
+    function onMove(ev){
+      const dx=ev.clientX-sx, dy=ev.clientY-sy;
+      if(isResize){
+        if(active.tagName==='IMG'){ const ratio=(active.naturalWidth||start.w)/(active.naturalHeight||start.h); const newW=Math.max(30,start.w+dx), newH=Math.max(30,newW/ratio); active.style.width=newW+'px'; active.style.height=newH+'px'; }
+        else { active.style.width=Math.max(30,start.w+dx)+'px'; active.style.height=Math.max(30,start.h+dy)+'px'; }
+      }else{
+        active.style.left=(start.left+dx)+'px'; active.style.top=(start.top+dy)+'px';
+      }
+    }
+    function onUp(){ removeEventListener('pointermove',onMove); removeEventListener('pointerup',onUp); }
+    addEventListener('pointermove',onMove); addEventListener('pointerup',onUp);
   });
 
-  function startMarqueeOrPick(e){
+  // Marquee selection (drag on empty area in Select mode)
+  function startMarquee(e){
     const P=pageInner.getBoundingClientRect();
-    const start={x:e.clientX-P.left, y:e.clientY-P.top};
+    marqueeStart={x:e.clientX-P.left,y:e.clientY-P.top};
     marquee=document.createElement('div'); marquee.id='marquee';
-    marquee.style.left=start.x+'px'; marquee.style.top=start.y+'px'; marquee.style.width='0px'; marquee.style.height='0px';
+    marquee.style.left=marqueeStart.x+'px'; marquee.style.top=marqueeStart.y+'px'; marquee.style.width='0px'; marquee.style.height='0px';
     pageInner.appendChild(marquee);
 
     function onMove(ev){
       const x=ev.clientX-P.left, y=ev.clientY-P.top;
-      const left=Math.min(start.x,x), top=Math.min(start.y,y), w=Math.abs(x-start.x), h=Math.abs(y-start.y);
+      const left=Math.min(marqueeStart.x,x), top=Math.min(marqueeStart.y,y), w=Math.abs(x-marqueeStart.x), h=Math.abs(y-marqueeStart.y);
       marquee.style.left=left+'px'; marquee.style.top=top+'px'; marquee.style.width=w+'px'; marquee.style.height=h+'px';
     }
-    function onUp(ev){
+    function onUp(){
       removeEventListener('pointermove',onMove); removeEventListener('pointerup',onUp);
       const mrect=marquee.getBoundingClientRect(); marquee.remove(); marquee=null;
+
+      // 1) select any .selectable inside
       clearSelection();
-
-      const small = (mrect.width<6 && mrect.height<6); // click without drag
-      if(small){ pickInkAround(ev.clientX, ev.clientY); return; }
-
-      // select selectable items inside
       rt.querySelectorAll('.selectable').forEach(n=>{ if(intersects(mrect,n.getBoundingClientRect())) n.classList.add('selected'); });
-      // lift drawing fragment
-      liftInkInRect(mrect);
+
+      // 2) lift drawing fragment as overlay if marquee intersected fg canvas
+      const fgR=fg.getBoundingClientRect();
+      const ix=Math.max(mrect.left, fgR.left), iy=Math.max(mrect.top, fgR.top),
+            ax=Math.min(mrect.right,fgR.right), ay=Math.min(mrect.bottom,fgR.bottom);
+      const iw=Math.max(0, ax-ix), ih=Math.max(0, ay-iy);
+      if(iw>10 && ih>10){
+        const x=ix-fgR.left, y=iy-fgR.top; // CSS px
+        const snap=ctx.getImageData(x*dpr,y*dpr,iw*dpr,ih*dpr);
+        ctx.clearRect(x,y,iw,ih); // remove fragment from canvas
+
+        const oc=document.createElement('canvas'); oc.width=iw*dpr; oc.height=ih*dpr;
+        const ocx=oc.getContext('2d'); ocx.putImageData(snap,0,0);
+        const img=new Image(); img.src=oc.toDataURL('image/png');
+
+        const box=document.createElement('div'); box.className='overlay selectable selected';
+        const PR=pageInner.getBoundingClientRect();
+        box.style.position='absolute'; box.style.left=(ix-PR.left)+'px'; box.style.top=(iy-PR.top)+'px'; box.style.width=iw+'px'; box.style.height=ih+'px';
+        img.style.width='100%'; img.style.height='100%'; img.draggable=false; box.appendChild(img); pageInner.appendChild(box);
+        active=box;
+      }
     }
     addEventListener('pointermove',onMove); addEventListener('pointerup',onUp);
   }
 
   function intersects(a,b){ return !(b.left>a.right || b.right<a.left || b.top>a.bottom || b.bottom<a.top); }
 
-  // Lift drawing in marquee rectangle
-  function liftInkInRect(mrect){
-    const fgR=fg.getBoundingClientRect();
-    const ix=Math.max(mrect.left, fgR.left), iy=Math.max(mrect.top, fgR.top),
-          ax=Math.min(mrect.right,fgR.right), ay=Math.min(mrect.bottom,fgR.bottom);
-    const iw=Math.max(0, ax-ix), ih=Math.max(0, ay-iy);
-    if(iw<3 || ih<3) return;
-
-    const x=ix-fgR.left, y=iy-fgR.top; // CSS px
-    const snap=ctx.getImageData(x*dpr,y*dpr,iw*dpr,ih*dpr);
-    if(isAllTransparent(snap)) return;
-
-    ctx.clearRect(x,y,iw,ih);
-    makeOverlayFromImageData(snap, ix, iy, iw, ih);
-  }
-
-  // Click-pick a 64×64 area around pointer (auto-shrinks to ink bounds)
-  function pickInkAround(clientX, clientY){
-    const fgR=fg.getBoundingClientRect();
-    const cx=clientX-fgR.left, cy=clientY-fgR.top;
-    const half=32, x=Math.max(0,cx-half), y=Math.max(0,cy-half);
-    const iw=Math.min(64, fgR.width-x), ih=Math.min(64, fgR.height-y);
-    const snap=ctx.getImageData(x*dpr,y*dpr,iw*dpr,ih*dpr);
-    const box=getInkBounds(snap); if(!box) return; // no ink here
-    // refine area to actual ink box
-    const rx=x+box.x, ry=y+box.y, rw=box.w, rh=box.h;
-    const snap2=ctx.getImageData(rx*dpr,ry*dpr,rw*dpr,rh*dpr);
-    ctx.clearRect(rx,ry,rw,rh);
-    makeOverlayFromImageData(snap2, fgR.left+rx, fgR.top+ry, rw, rh);
-  }
-  function isAllTransparent(id){ const a=id.data; for(let i=3;i<a.length;i+=4){ if(a[i]) return false; } return true; }
-  function getInkBounds(id){
-    const w=id.width, h=id.height, d=id.data;
-    let minX=w, minY=h, maxX=-1, maxY=-1;
-    for(let y=0;y<h;y++){ for(let x=0;x<w;x++){ const a=d[(y*w+x)*4+3]; if(a){ if(x<minX)minX=x; if(y<minY)minY=y; if(x>maxX)maxX=x; if(y>maxY)maxY=y; } } }
-    if(maxX<minX || maxY<minY) return null;
-    return {x:minX, y=minY, w:maxX-minX+1, h:maxY-minY+1};
-  }
-  function makeOverlayFromImageData(id, cssLeft, cssTop, cssW, cssH){
-    const oc=document.createElement('canvas'); oc.width=id.width; oc.height=id.height; oc.getContext('2d').putImageData(id,0,0);
-    const img=new Image(); img.src=oc.toDataURL('image/png');
-    const box=document.createElement('div'); box.className='overlay selectable selected';
-    const P=pageInner.getBoundingClientRect();
-    box.style.position='absolute'; box.style.left=(cssLeft-P.left)+'px'; box.style.top=(cssTop-P.top)+'px'; box.style.width=cssW+'px'; box.style.height=cssH+'px';
-    img.style.width='100%'; img.style.height='100%'; img.draggable=false; box.appendChild(img); pageInner.appendChild(box);
-    active=box; hideTableTools();
-  }
-
-  // Delete selected things in hand mode
+  // Delete in hand mode
   addEventListener('keydown',(e)=>{ if(!hand) return; if(e.key==='Delete'||e.key==='Backspace'){ e.preventDefault(); pageInner.querySelectorAll('.overlay.selected').forEach(n=>n.remove()); rt.querySelectorAll('.selectable.selected').forEach(n=>n.remove()); clearSelection(); } });
 
-  /* ---------- Table row/column tools ---------- */
-  function findSelectedTable(){ return rt.querySelector('table.nb-table.selected'); }
-  tblAddRow.addEventListener('click',()=>{ const t=findSelectedTable(); if(!t) return; const cols=t.rows[0]?t.rows[0].cells.length:2; const tr=t.insertRow(-1); for(let i=0;i<cols;i++){ const td=tr.insertCell(-1); td.innerHTML='<br>'; } });
-  tblDelRow.addEventListener('click',()=>{ const t=findSelectedTable(); if(!t||!t.rows.length) return; t.deleteRow(-1); });
-  tblAddCol.addEventListener('click',()=>{ const t=findSelectedTable(); if(!t) return; [...t.rows].forEach(r=>{ const td=r.insertCell(-1); td.innerHTML='<br>'; }); });
-  tblDelCol.addEventListener('click',()=>{ const t=findSelectedTable(); if(!t||!t.rows[0]||!t.rows[0].cells.length) return; const last=t.rows[0].cells.length-1; [...t.rows].forEach(r=>r.deleteCell(last)); });
-
-  /* ---------- Text formatting ---------- */
+  // ===== Text formatting (execCommand for simplicity)
   function exec(cmd,val=null){ document.execCommand(cmd,false,val); rt.focus(); }
   fontSel.addEventListener('change',()=>exec('fontName',fontSel.value));
   fontSizeSel.addEventListener('change',()=>{ document.execCommand('fontSize',false,'4'); rt.querySelectorAll('font[size="4"]').forEach(f=>{ f.removeAttribute('size'); f.style.fontFamily=fontSel.value; f.style.fontSize=fontSizeSel.value+'px'; }); rt.focus(); });
@@ -537,67 +471,88 @@ themeToggle.addEventListener('click',()=>{ const isLight=root.getAttribute('data
   alignRight.addEventListener('click',()=>exec('justifyRight'));
   clearFmt.addEventListener('click',()=>exec('removeFormat'));
 
-  /* ---------- Pages / persistence ---------- */
+  // ===== Pages / persistence (localStorage)
   const me = window.OOP && OOP.getCurrentUser ? OOP.getCurrentUser() : null;
-  const saveKey = me ? `oop.notebook.v9.${me.email}` : 'oop.notebook.v9.anon';
+  const saveKey = me ? `oop.notebook.v8.${me.email}` : 'oop.notebook.v8.anon';
 
   function pageSnapshot(){ return { header:{title:hTitle.value,section:hSection.value,page:hPage.value,date:hDate.value},
     layout:{type:layoutSel.value,spacing:spacingEl.value,color:layoutColorEl.value,pageColor:pageColorEl.value,margin:marginToggle.checked,marginColor:marginColorEl.value},
     pen:{size:sizeEl.value,color:inkEl.value,opacity:opacityEl.value,lastTool:tool},
     drawing: fg.toDataURL(), text: rt.innerHTML }; }
-  function renderPage(obj){ const hd=obj.header||{}; hTitle.value=hd.title||''; hSection.value=hd.section||''; hPage.value=hd.page||''; hDate.value=hd.date||new Date().toISOString().slice(0,10);
+
+  function renderPage(obj){
+    const hd=obj.header||{}; hTitle.value=hd.title||''; hSection.value=hd.section||''; hPage.value=hd.page||''; hDate.value=hd.date||new Date().toISOString().slice(0,10);
     const ly=obj.layout||{}; layoutSel.value=ly.type||'ruled'; spacingEl.value=ly.spacing||24; layoutColorEl.value=ly.color||'#a1a1aa'; pageColorEl.value=ly.pageColor||'#ffffff'; marginToggle.checked=!!ly.margin; marginColorEl.value=ly.marginColor||'#ef4444';
     const pn=obj.pen||{}; sizeEl.value=pn.size||6; inkEl.value=pn.color||'#111111'; opacityEl.value=pn.opacity||.95; setActiveTool(pn.lastTool||'text');
-    drawBackground(); const R=fg.getBoundingClientRect(); ctx.clearRect(0,0,R.width,R.height);
+    drawBackground();
+    const R=fg.getBoundingClientRect(); ctx.clearRect(0,0,R.width,R.height);
     if(obj.drawing){ const img=new Image(); img.onload=()=>{ ctx.clearRect(0,0,R.width,R.height); ctx.drawImage(img,0,0,R.width,R.height); }; img.src=obj.drawing; }
-    rt.innerHTML=obj.text||''; updatePager(); }
+    rt.innerHTML=obj.text||''; updatePager();
+  }
+
   function saveAll(){ commitOverlays(); pages[current]=pageSnapshot(); localStorage.setItem(saveKey, JSON.stringify({pages,current})); alert('Notebook saved'); }
-  function loadAll(){ const raw=localStorage.getItem(saveKey); if(!raw){ pages=[pageSnapshot()]; current=0; updatePager(); return; } try{ const data=JSON.parse(raw); pages=(Array.isArray(data.pages)&&data.pages.length)?data.pages:[pageSnapshot()]; current=Math.min(Math.max(0,data.current||0),pages.length-1); renderPage(pages[current]); }catch{ pages=[pageSnapshot()]; current=0; } }
-  function newPage(){ commitOverlays(); pages[current]=pageSnapshot(); const base=pageSnapshot(); const n=parseInt(base.header.page,10); if(!isNaN(n)) base.header.page=String(n+1); base.text=''; base.drawing=null; pages.splice(current+1,0,base); current+=1; renderPage(base); updatePager(); autoSaveSoon(); }
+  function loadAll(){
+    const raw=localStorage.getItem(saveKey);
+    if(!raw){ pages=[pageSnapshot()]; current=0; updatePager(); return; }
+    try{ const data=JSON.parse(raw); pages=(Array.isArray(data.pages)&&data.pages.length)?data.pages:[pageSnapshot()]; current=Math.min(Math.max(0,data.current||0),pages.length-1); renderPage(pages[current]); }
+    catch{ pages=[pageSnapshot()]; current=0; }
+  }
+
+  function newPage(){
+    commitOverlays(); pages[current]=pageSnapshot();
+    const base=pageSnapshot(); const n=parseInt(base.header.page,10); if(!isNaN(n)) base.header.page=String(n+1);
+    base.text=''; base.drawing=null; pages.splice(current+1,0,base); current+=1; renderPage(base); updatePager(); autoSaveSoon();
+  }
   function goto(delta){ commitOverlays(); pages[current]=pageSnapshot(); const next=current+delta; if(next<0||next>=pages.length) return; current=next; renderPage(pages[current]); autoSaveSoon(); }
   function updatePager(){ pageIndicator.textContent=`Page ${current+1} / ${pages.length}`; }
   let saveTimer=null; function autoSaveSoon(){ clearTimeout(saveTimer); saveTimer=setTimeout(saveAll,400); }
-  el('save').addEventListener('click',saveAll); el('load').addEventListener('click',loadAll); btnNewPage.addEventListener('click',newPage); btnPrev.addEventListener('click',()=>goto(-1)); btnNext.addEventListener('click',()=>goto(1));
 
-  /* ---------- Export / Print ---------- */
+  document.getElementById('save').addEventListener('click',saveAll);
+  document.getElementById('load').addEventListener('click',loadAll);
+  btnNewPage.addEventListener('click',newPage);
+  btnPrev.addEventListener('click',()=>goto(-1));
+  btnNext.addEventListener('click',()=>goto(1));
+
+  // ===== Export / Print (commit overlays first)
   async function renderDomToImage(domHTML,w,h){
     const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" style="width:${w}px;height:${h}px;overflow:hidden;"><style>*{box-sizing:border-box}.rt-root{font:16px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;color:#111;padding:12px}.rt-root img{max-width:100%;height:auto;border-radius:6px}</style>${domHTML}</div></foreignObject></svg>`;
-    const url='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg); return await new Promise(res=>{ const img=new Image(); img.onload=()=>res(img); img.src=url; });
+    const url='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+    return await new Promise(res=>{ const img=new Image(); img.onload=()=>res(img); img.src=url; });
   }
   async function composePageImage(){
     commitOverlays();
-    const R=pageInner.getBoundingClientRect(), w=Math.round(R.width), h=Math.round(R.height-header.offsetHeight);
+    const R=pageInner.getBoundingClientRect(), w=Math.round(R.width), h=Math.round(R.height - headBar.offsetHeight);
     const tmp=document.createElement('canvas'), tctx=tmp.getContext('2d'); tmp.width=w; tmp.height=h;
     tctx.fillStyle=pageColorEl.value||'#ffffff'; tctx.fillRect(0,0,w,h);
     tctx.drawImage(bg,0,0,w,h); tctx.drawImage(fg,0,0,w,h);
-    const dom=`<div class="rt-root" style="width:${w}px;height:${h}px;">${rt.innerHTML}</div>`; const img=await renderDomToImage(dom,w,h); tctx.drawImage(img,0,0,w,h); return tmp.toDataURL('image/png');
+    const dom=`<div class="rt-root" style="width:${w}px;height:${h}px;">${rt.innerHTML}</div>`;
+    const img=await renderDomToImage(dom,w,h); tctx.drawImage(img,0,0,w,h); return tmp.toDataURL('image/png');
   }
-  el('export').addEventListener('click',async()=>{ const url=await composePageImage(); const a=document.createElement('a'); a.href=url; a.download='notebook-page.png'; a.click(); });
-  el('print').addEventListener('click',async()=>{ const url=await composePageImage(); const w=window.open('','_blank'); w.document.write(`<!DOCTYPE html><html><head><title>Print</title><style>html,body{margin:0}img{width:100%;height:auto}</style></head><body><img src="${url}"/></body></html>`); w.document.close(); w.onload=()=>w.print(); });
+  document.getElementById('export').addEventListener('click',async()=>{ const url=await composePageImage(); const a=document.createElement('a'); a.href=url; a.download='notebook-page.png'; a.click(); });
+  document.getElementById('print').addEventListener('click',async()=>{ const url=await composePageImage(); const w=window.open('','_blank'); w.document.write(`<!DOCTYPE html><html><head><title>Print</title><style>html,body{margin:0}img{width:100%;height:auto}</style></head><body><img src="${url}"/></body></html>`); w.document.close(); w.onload=()=>w.print(); });
 
-  /* ---------- Clear Page (everything) ---------- */
+  // ===== Clear Page (everything)
   btnClear.addEventListener('click',()=>{
-    commitOverlays();
-    const R=fg.getBoundingClientRect(); ctx.clearRect(0,0,R.width,R.height);
+    commitOverlays(); const R=fg.getBoundingClientRect(); ctx.clearRect(0,0,R.width,R.height);
     rt.innerHTML=''; hTitle.value=''; hSection.value=''; hPage.value=''; hDate.value=new Date().toISOString().slice(0,10);
-    clearSelection(); drawBackground();
+    clearSelection(); drawBackground(); autoSaveSoon();
   });
 
-  /* ---------- Commit overlays back to the canvas ---------- */
+  // ===== Commit drawing overlays back to canvas
   function commitOverlays(){
+    const R=fg.getBoundingClientRect();
     pageInner.querySelectorAll('.overlay').forEach(box=>{
       const img=box.querySelector('img'); if(!img) return;
       const left=parseFloat(box.style.left)||0, top=parseFloat(box.style.top)||0, w=parseFloat(box.style.width)||img.width, h=parseFloat(box.style.height)||img.height;
-      const x=left, y=top - header.offsetHeight; // CSS px
-      ctx.drawImage(img, x, y, w, h);
-      box.remove();
+      const x=left, y=top - headBar.offsetHeight;
+      ctx.drawImage(img, x, y, w, h); box.remove();
     });
   }
 
-  /* ---------- Init ---------- */
+  // ===== Init
   hDate.value=new Date().toISOString().slice(0,10);
   setActiveTool('text');
-  setTimeout(()=>{ resizeCanvases(); drawBackground(); pages=[pageSnapshot()]; current=0; updatePager(); },0);
+  setTimeout(()=>{ resizeCanvases(); drawBackground(); /* first page */ pages=[pageSnapshot()]; current=0; updatePager(); },0);
 })();
 </script>
 </body>
